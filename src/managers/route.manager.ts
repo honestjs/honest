@@ -1,7 +1,7 @@
 import type { Context, Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { VERSION_NEUTRAL } from '../constants'
-import type { DiContainer } from '../interfaces'
+import type { DiContainer, RouteDefinition } from '../interfaces'
 import { ComponentManager } from '../managers'
 import { MetadataRegistry, RouteRegistry } from '../registries'
 import type { Constructor } from '../types'
@@ -150,17 +150,15 @@ export class RouteManager {
 		const parameterMetadata = MetadataRegistry.getParameters(controllerClass) || new Map()
 		const contextIndices = MetadataRegistry.getContextIndices(controllerClass) || new Map()
 
+		// Normalize the controller path
+		const controllerSegment = this.normalizePath(controllerPath)
+
 		// Resolve controller instance with dependencies
 		const controllerInstance = this.container.resolve(controllerClass)
 
-		// Use controller-specific prefix if provided, otherwise use global one
-		const effectivePrefix = !isNil(controllerOptions.prefix) ? controllerOptions.prefix : this.globalPrefix
-
-		// Normalize the prefix
-		const prefixSegment = !isNil(effectivePrefix) ? this.normalizePath(effectivePrefix) : ''
-
-		// Normalize the controller path
-		const controllerSegment = this.normalizePath(controllerPath)
+		// Allow opting out of prefix by setting version to null
+		const effectiveControllerPrefix =
+			controllerOptions.prefix !== undefined ? controllerOptions.prefix : this.globalPrefix
 
 		// Allow opting out of versioning by setting version to null
 		const effectiveControllerVersion =
@@ -168,7 +166,11 @@ export class RouteManager {
 
 		// Register routes
 		for (const route of routes) {
-			const { path, method, handlerName, version: routeVersion } = route
+			const { path, method, handlerName, version: routeVersion, prefix: routePrefix } = route
+
+			// Determine the effective prefix for this specific route
+			const effectivePrefix = routePrefix !== undefined ? routePrefix : effectiveControllerPrefix
+			const prefixSegment = !isNil(effectivePrefix) ? this.normalizePath(effectivePrefix) : ''
 
 			// Check for method-level version setting which overrides controller and global versions
 			const effectiveVersion = routeVersion !== undefined ? routeVersion : effectiveControllerVersion
@@ -282,11 +284,11 @@ export class RouteManager {
 	 */
 	private registerRoute(
 		controllerInstance: any,
-		route: any,
+		route: RouteDefinition,
 		parameterMetadata: Map<string | symbol, any[]>,
 		contextIndices: Map<string | symbol, number>,
 		controllerClass: Constructor,
-		prefix: string,
+		prefixSegment: string,
 		versionSegment: string,
 		controllerSegment: string,
 		methodSegment: string,
@@ -295,7 +297,7 @@ export class RouteManager {
 		const { handlerName } = route
 
 		// Build the full path in the correct order: prefix, version, controller, method
-		const fullPath = this.buildRoutePath(prefix, versionSegment, controllerSegment, methodSegment)
+		const fullPath = this.buildRoutePath(prefixSegment, versionSegment, controllerSegment, methodSegment)
 
 		const handler = controllerInstance[handlerName].bind(controllerInstance)
 
@@ -314,7 +316,7 @@ export class RouteManager {
 			controller: controllerClass.name,
 			handler: handlerName,
 			method,
-			prefix,
+			prefix: prefixSegment,
 			version: versionSegment,
 			route: controllerSegment,
 			path: methodSegment,

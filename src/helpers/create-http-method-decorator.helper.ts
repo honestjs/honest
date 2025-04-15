@@ -26,7 +26,8 @@ export function createHttpMethodDecorator(method: string) {
 				method,
 				handlerName: propertyKey,
 				parameterMetadata: [],
-				version: options.version
+				version: options.version,
+				prefix: options.prefix
 			})
 		}
 	}
