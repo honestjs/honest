@@ -1,5 +1,3 @@
-# Honest Framework
-
 <p align="center">
   <a href="https://github.com/honestjs/" target="blank"><img src="https://avatars.githubusercontent.com/u/197956909" width="120" alt="Honest Logo" /></a>
 </p>
