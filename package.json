@@ -1,0 +1,51 @@
+{
+	"name": "honest",
+	"version": "0.1.0",
+	"author": "Orkhan Karimov <karimovok1@gmail.com> (https://github.com/kerimovok)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/honestjs/honest.git"
+	},
+	"main": "dist/index.js",
+	"module": "dist/index.js",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"prettier": "3.5.3"
+	},
+	"peerDependencies": {
+		"hono": "^4",
+		"typescript": "^5",
+		"reflect-metadata": "^0.2.2"
+	},
+	"description": "Nest.js inspired framework for Hono.js",
+	"files": [
+		"dist"
+	],
+	"homepage": "https://github.com/honestjs/honest",
+	"keywords": [
+		"nodejs",
+		"bun",
+		"deno",
+		"javascript",
+		"typescript",
+		"node",
+		"framework",
+		"web-framework",
+		"hono",
+		"nest",
+		"honest"
+	],
+	"license": "MIT",
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org"
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "bun run clean && bun build ./src/index.ts --outdir=dist --target=node --minify --external hono --external reflect-metadata && bun run build:types",
+		"build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"type": "module",
+	"types": "dist/index.d.ts"
+}
