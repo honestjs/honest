@@ -50,15 +50,15 @@ export class Application {
 		// Initialize container
 		this.container = this.options.container || new Container()
 
+		// Set up components and error handlers
+		this.setupComponents()
+		this.setupErrorHandlers()
+
 		// Initialize the route manager with global options
 		this.routeManager = new RouteManager(this.hono, this.container, {
 			prefix: this.options.routing?.prefix,
 			version: this.options.routing?.version
 		})
-
-		// Set up components and error handlers
-		this.setupComponents()
-		this.setupErrorHandlers()
 	}
 
 	/**
