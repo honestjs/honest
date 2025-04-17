@@ -122,4 +122,4 @@ export default hono
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT © [Orkhan Karimov](https://github.com/kerimovok)
