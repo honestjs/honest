@@ -1,10 +1,45 @@
 <p align="center">
   <a href="https://github.com/honestjs/" target="blank"><img src="https://avatars.githubusercontent.com/u/197956909" width="120" alt="Honest Logo" /></a>
 </p>
+
 <p align="center">
 A modern, TypeScript-first web framework built on top of <a href="https://hono.dev/" target="blank">Hono</a>, designed for building scalable and
 maintainable web applications. Honest combines the elegance and architecture of <a href="https://nestjs.com/" target="blank">Nest</a> with the
 ultra-fast performance of Hono, giving you the best of both worlds.
+</p>
+
+<p align="center">
+	<a href="https://github.com/honestjs/examples">
+		<u>examples</u>
+	</a>
+	|
+	<a href="https://github.com/honestjs/templates">
+		<u>templates</u>
+	</a>
+</p>
+
+<p align="center">
+	<a href="https://github.com/honestjs/middleware">
+		<u>middleware</u>
+	</a>
+	|
+	<a href="https://github.com/honestjs/guards">
+		<u>guards</u>
+	</a>
+	|
+	<a href="https://github.com/honestjs/pipes">
+		<u>pipes</u>
+	</a>
+	|
+	<a href="https://github.com/honestjs/filters">
+		<u>filters</u>
+	</a>
+</p>
+
+<p align="center">
+	<a href="https://github.com/honestjs/http-essentials">
+		<u>http-essentials</u>
+	</a>
 </p>
 
 > ⚠️ **Early Development Warning**
