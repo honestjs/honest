@@ -11,11 +11,3 @@ export * from './managers'
 export * from './registries'
 export * from './types'
 export * from './utils'
-
-declare global {
-	namespace Reflect {
-		function getMetadata(metadataKey: string, target: object): any
-		function defineMetadata(metadataKey: string, metadataValue: any, target: object): void
-		function hasMetadata(metadataKey: string, target: object): boolean
-	}
-}
