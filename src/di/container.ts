@@ -13,20 +13,28 @@ export class Container implements DiContainer {
 	/**
 	 * Resolves a class instance, creating it if necessary and injecting its dependencies
 	 * @param target - The class constructor to resolve
+	 * @param resolving - A set of classes currently being resolved, for circular dependency detection
 	 * @returns An instance of the target class
 	 */
-	resolve<T>(target: Constructor<T>): T {
+	resolve<T>(target: Constructor<T>, resolving = new Set<Constructor>()): T {
 		// Return cached instance if available
 		if (this.instances.has(target)) {
 			return this.instances.get(target)
 		}
+
+		if (resolving.has(target)) {
+			throw new Error(
+				`Circular dependency detected: ${[...resolving.keys(), target].map((t) => t.name).join(' -> ')}`
+			)
+		}
+		resolving.add(target)
 
 		// Get constructor parameters metadata
 		const paramTypes = Reflect.getMetadata('design:paramtypes', target) || []
 
 		// Resolve dependencies recursively
 		const dependencies = paramTypes.map((paramType: Constructor) => {
-			return this.resolve(paramType)
+			return this.resolve(paramType, new Set(resolving))
 		})
 
 		// Create new instance with dependencies
