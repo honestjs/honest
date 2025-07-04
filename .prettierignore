@@ -1,0 +1,20 @@
+# Ignore artifacts:
+node_modules/
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+*.js.map
+*.css.map
+*.yml
+*.yaml
+*.txt
+*.lock
+.DS_Store
+.gitignore
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+bun.lock
