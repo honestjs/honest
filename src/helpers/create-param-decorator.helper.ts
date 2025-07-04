@@ -19,6 +19,7 @@ import type { Constructor } from '../types'
  */
 export function createParamDecorator<T = any>(type: string, factory?: (data: any, ctx: Context) => T) {
 	return (data?: any) => {
+		// eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
 		return (target: Object, propertyKey: string | symbol, parameterIndex: number): void => {
 			const controllerClass = target.constructor as Constructor
 

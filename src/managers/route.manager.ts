@@ -166,6 +166,7 @@ export class RouteManager {
 
 		// Register routes
 		for (const route of routes) {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { path, method, handlerName, version: routeVersion, prefix: routePrefix } = route
 
 			// Determine the effective prefix for this specific route

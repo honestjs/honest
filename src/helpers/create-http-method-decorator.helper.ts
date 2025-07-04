@@ -17,6 +17,7 @@ import { MetadataRegistry } from '../registries'
  */
 export function createHttpMethodDecorator(method: string) {
 	return (path = '', options: HttpMethodOptions = {}): MethodDecorator => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
 			const controllerClass = target.constructor
 

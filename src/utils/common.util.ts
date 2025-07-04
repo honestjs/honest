@@ -55,6 +55,7 @@ export const isPlainObject = (val: unknown): val is Record<string, unknown> => {
  * @param val - The value to check
  * @returns True if the value is a function, false otherwise
  */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export const isFunction = (val: unknown): val is Function => typeof val === 'function'
 
 /**
