@@ -8,6 +8,7 @@ import type {
 	PipeType,
 	RouteDefinition
 } from '../interfaces'
+import type { ComponentWithpath } from '../interfaces/component-with-path.interface'
 import type { Constructor } from '../types'
 
 /**
@@ -93,6 +94,17 @@ export class MetadataRegistry {
 		['guard', new Set<GuardType>()],
 		['pipe', new Set<PipeType>()],
 		['filter', new Set<FilterType>()]
+	])
+
+	/**
+	 * Registry for global-level components with a path
+	 * Components registered here apply to routes matching the path
+	 */
+	private static readonly globalWithPath = new Map<ComponentType, ComponentWithpath<ComponentInstance>[]>([
+		['middleware', []],
+		['guard', []],
+		['pipe', []],
+		['filter', []]
 	])
 
 	/**
@@ -242,10 +254,27 @@ export class MetadataRegistry {
 	}
 
 	/**
+	 * Register a component with a path at the global level
+	 */
+	static registerGlobalWithPath<T extends ComponentType>(
+		type: T,
+		component: ComponentWithpath<ComponentTypeMap[T]>
+	): void {
+		this.globalWithPath.get(type)!.push(component as unknown as ComponentWithpath<ComponentInstance>)
+	}
+
+	/**
 	 * Get all global components of a specific type
 	 */
 	static getGlobal<T extends ComponentType>(type: T): Set<ComponentTypeMap[T]> {
 		return this.global.get(type) as unknown as Set<ComponentTypeMap[T]>
+	}
+
+	/**
+	 * Get all global components with a path of a specific type
+	 */
+	static getGlobalWithPath<T extends ComponentType>(type: T): ComponentWithpath<ComponentTypeMap[T]>[] {
+		return (this.globalWithPath.get(type) as unknown as ComponentWithpath<ComponentTypeMap[T]>[]) || []
 	}
 
 	/**

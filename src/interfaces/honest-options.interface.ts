@@ -1,7 +1,8 @@
 import type { Context } from 'hono'
 import type { VERSION_NEUTRAL } from '../constants'
-import type { FilterType, GuardType, MiddlewareType, PipeType, PluginType } from '../interfaces'
+import type { ComponentWithpath } from './component-with-path.interface'
 import type { DiContainer } from './di-container.interface'
+import type { FilterType, GuardType, MiddlewareType, PipeType, PluginType } from './index'
 
 /**
  * Options for configuring the Honest application
@@ -54,22 +55,22 @@ export interface HonestOptions {
 		/**
 		 * Global middleware to apply to all routes
 		 */
-		middleware?: MiddlewareType[]
+		middleware?: (MiddlewareType | ComponentWithpath<MiddlewareType>)[]
 
 		/**
 		 * Global guards to apply to all routes
 		 */
-		guards?: GuardType[]
+		guards?: (GuardType | ComponentWithpath<GuardType>)[]
 
 		/**
 		 * Global pipes to apply to all routes
 		 */
-		pipes?: PipeType[]
+		pipes?: (PipeType | ComponentWithpath<PipeType>)[]
 
 		/**
 		 * Global exception filters to apply to all routes
 		 */
-		filters?: FilterType[]
+		filters?: (FilterType | ComponentWithpath<FilterType>)[]
 	}
 
 	/**

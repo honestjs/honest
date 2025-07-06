@@ -12,10 +12,16 @@ import type {
 	MiddlewareType,
 	PipeType
 } from '../interfaces'
+import type { ComponentWithpath } from '../interfaces/component-with-path.interface'
 import { type ComponentType, type ComponentTypeMap, MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
+import { normalizePath } from '../utils'
 
 const isObject = (val: unknown): val is Record<PropertyKey, unknown> => val !== null && typeof val === 'object'
+
+function isComponentWithpath<T>(value: unknown): value is ComponentWithpath<T> {
+	return isObject(value) && 'path' in value && 'component' in value
+}
 
 /**
  * Manager class for handling all component types in the Honest framework
@@ -46,36 +52,43 @@ export class ComponentManager {
 	 * @param options.components.filters - Optional array of global filters
 	 */
 	static setupGlobalComponents(options: {
-		components?: { middleware?: any[]; guards?: any[]; pipes?: any[]; filters?: any[] }
+		components?: {
+			middleware?: (MiddlewareType | ComponentWithpath<MiddlewareType>)[]
+			guards?: (GuardType | ComponentWithpath<GuardType>)[]
+			pipes?: (PipeType | ComponentWithpath<PipeType>)[]
+			filters?: (FilterType | ComponentWithpath<FilterType>)[]
+		}
 	}): void {
 		const components = options.components || {}
 
+		const register = <T extends ComponentType>(
+			type: T,
+			items: (ComponentTypeMap[T] | ComponentWithpath<ComponentTypeMap[T]>)[]
+		) => {
+			for (const item of items) {
+				if (isComponentWithpath(item)) {
+					MetadataRegistry.registerGlobalWithPath(type, item)
+				} else {
+					MetadataRegistry.registerGlobal(type, item)
+				}
+			}
+		}
+
 		if (components.middleware) {
-			this.registerGlobal('middleware', ...components.middleware)
+			register('middleware', components.middleware)
 		}
 
 		if (components.guards) {
-			this.registerGlobal('guard', ...components.guards)
+			register('guard', components.guards)
 		}
 
 		if (components.pipes) {
-			this.registerGlobal('pipe', ...components.pipes)
+			register('pipe', components.pipes)
 		}
 
 		if (components.filters) {
-			this.registerGlobal('filter', ...components.filters)
+			register('filter', components.filters)
 		}
-	}
-
-	/**
-	 * Registers a component at the global level
-	 * @param type - The type of component to register
-	 * @param components - The component classes or instances to register
-	 */
-	static registerGlobal<T extends ComponentType>(type: T, ...components: ComponentTypeMap[T][]): void {
-		components.forEach((component) => {
-			MetadataRegistry.registerGlobal(type, component)
-		})
 	}
 
 	/**
@@ -118,12 +131,14 @@ export class ComponentManager {
 	 * @param type - The type of component to get
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
+	 * @param routePath - The route path
 	 * ..returns An array of component instances
 	 */
 	static getComponents<T extends ComponentType>(
 		type: T,
 		controller: Constructor,
-		handlerName: string | symbol
+		handlerName: string | symbol,
+		routePath: string
 	): ComponentTypeMap[T][] {
 		const handlerKey = `${controller.name}:${String(handlerName)}`
 
@@ -133,11 +148,27 @@ export class ComponentManager {
 		// Get controller-level components
 		const controllerComponents = MetadataRegistry.getController(type, controller)
 
+		// Middleware is handled differently
+		if (type === 'middleware') {
+			return [...controllerComponents, ...handlerComponents]
+		}
+
 		// Get global components
 		const globalComponents = Array.from(MetadataRegistry.getGlobal(type))
 
+		// Get path-scoped global components
+		const globalComponentsWithPath = MetadataRegistry.getGlobalWithPath(type)
+		const matchingPathComponents = globalComponentsWithPath
+			.filter((c) => routePath.startsWith(normalizePath(c.path)))
+			.map((c) => c.component)
+
 		// Combine components (global components run first, then controller components, then handler components)
-		return [...globalComponents, ...controllerComponents, ...handlerComponents]
+		return [
+			...(globalComponents as any[]),
+			...matchingPathComponents,
+			...controllerComponents,
+			...handlerComponents
+		]
 	}
 
 	// Middleware-specific methods
@@ -166,13 +197,14 @@ export class ComponentManager {
 	 * Gets middleware for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
+	 * @param routePath - The route path
 	 * ..returns An array of middleware functions
 	 */
 	static getHandlerMiddleware(
 		controller: Constructor,
 		handlerName: string | symbol
 	): ((c: Context, next: Next) => Promise<Response | void>)[] {
-		const middlewareItems = this.getComponents('middleware', controller, handlerName)
+		const middlewareItems = this.getComponents('middleware', controller, handlerName, '')
 		return this.resolveMiddleware(middlewareItems as MiddlewareType[])
 	}
 
@@ -183,6 +215,21 @@ export class ComponentManager {
 	static getGlobalMiddleware(): ((c: Context, next: Next) => Promise<Response | void>)[] {
 		const globalMiddleware = Array.from(MetadataRegistry.getGlobal('middleware'))
 		return this.resolveMiddleware(globalMiddleware as MiddlewareType[])
+	}
+
+	/**
+	 * Gets global middleware with their paths
+	 * @returns An array of objects with path and middleware function
+	 */
+	static getGlobalMiddlewareWithPath(): {
+		path: string
+		middleware: (c: Context, next: Next) => Promise<void | Response>
+	}[] {
+		const globalWithPath = MetadataRegistry.getGlobalWithPath('middleware')
+		return globalWithPath.map((item) => ({
+			path: item.path,
+			middleware: this.resolveMiddleware([item.component])[0]
+		}))
 	}
 
 	// Guard-specific methods
@@ -208,10 +255,11 @@ export class ComponentManager {
 	 * Gets guards for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
+	 * @param routePath - The route path
 	 * ..returns An array of guard instances
 	 */
-	static getHandlerGuards(controller: Constructor, handlerName: string | symbol): IGuard[] {
-		const guardItems = this.getComponents('guard', controller, handlerName)
+	static getHandlerGuards(controller: Constructor, handlerName: string | symbol, routePath: string): IGuard[] {
+		const guardItems = this.getComponents('guard', controller, handlerName, routePath)
 		return this.resolveGuards(guardItems as GuardType[])
 	}
 
@@ -238,10 +286,11 @@ export class ComponentManager {
 	 * Gets pipes for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
+	 * @param routePath - The route path
 	 * ..returns An array of pipe instances
 	 */
-	static getHandlerPipes(controller: Constructor, handlerName: string | symbol): IPipe[] {
-		const pipeItems = this.getComponents('pipe', controller, handlerName)
+	static getHandlerPipes(controller: Constructor, handlerName: string | symbol, routePath: string): IPipe[] {
+		const pipeItems = this.getComponents('pipe', controller, handlerName, routePath)
 		return this.resolvePipes(pipeItems as PipeType[])
 	}
 
@@ -277,6 +326,7 @@ export class ComponentManager {
 		// Get controller from context
 		const controller = context.get('controllerClass') as Constructor | undefined
 		const handlerName = context.get('handlerName') as string | undefined
+		const path = context.req.path
 
 		// 1. Try handler-level filters first if we have the handler information
 		if (controller && handlerName) {
@@ -298,8 +348,12 @@ export class ComponentManager {
 
 		// 3. Try global filters
 		const globalFilters = Array.from(MetadataRegistry.getGlobal('filter'))
-		if (globalFilters.length > 0) {
-			const response = await this.executeFilters(globalFilters as FilterType[], exception, context)
+		const globalFiltersWithPath = MetadataRegistry.getGlobalWithPath('filter')
+			.filter((f) => path.startsWith(normalizePath(f.path)))
+			.map((f) => f.component)
+		const allGlobalFilters = [...globalFilters, ...globalFiltersWithPath]
+		if (allGlobalFilters.length > 0) {
+			const response = await this.executeFilters(allGlobalFilters as FilterType[], exception, context)
 			if (response) return response
 		}
 
