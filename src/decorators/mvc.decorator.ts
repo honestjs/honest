@@ -11,7 +11,13 @@ import { Module } from './module.decorator'
  * @param options - Configuration options for the controller
  * @returns A class decorator function
  */
-export function View(route = '', options: ControllerOptions = {}): ClassDecorator {
+export function View(
+	route = '',
+	options: ControllerOptions = {
+		prefix: null,
+		version: null
+	}
+): ClassDecorator {
 	return Controller(route, options)
 }
 
