@@ -1,6 +1,7 @@
 export * from './controller.decorator'
 export * from './http-method.decorator'
 export * from './module.decorator'
+export * from './mvc.decorator'
 export * from './parameter.decorator'
 export * from './service.decorator'
 export * from './use-component.decorator'

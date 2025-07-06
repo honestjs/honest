@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 
 export * from './application'
+export * from './components'
 export * from './constants'
 export * from './decorators'
 export * from './di'
