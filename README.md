@@ -9,6 +9,12 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 </p>
 
 <p align="center">
+	<a href="https://github.com/honestjs/website">
+		<u>website</u>
+	</a>
+</p>
+
+<p align="center">
 	<a href="https://github.com/honestjs/examples">
 		<u>examples</u>
 	</a>
@@ -42,7 +48,7 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 	</a>
 </p>
 
-> ⚠️ **Early Development Warning**
+> 🚨 **Early Development Warning** 🚨
 >
 > Honest is currently in early development (pre-v1.0.0). Please be aware that:
 >
@@ -52,6 +58,10 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 > - Documentation may not always be up to date
 >
 > We recommend not using it in production until v1.0.0 is released.
+
+> ⚠️ **Documentation is not yet complete** ⚠️
+>
+> If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
 
 ## Features
 
