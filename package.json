@@ -1,7 +1,7 @@
 {
 	"name": "honestjs",
 	"description": "HonestJS - a modern web framework built on top of Hono",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"author": "Orkhan Karimov <karimovok1@gmail.com> (https://github.com/kerimovok)",
 	"repository": {
 		"type": "git",
