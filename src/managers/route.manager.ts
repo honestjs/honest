@@ -66,12 +66,6 @@ export class RouteManager {
 		for (const middleware of globalMiddleware) {
 			this.hono.use('*', middleware)
 		}
-
-		// Apply global middleware with paths
-		const globalMiddlewareWithPath = ComponentManager.getGlobalMiddlewareWithPath()
-		for (const mw of globalMiddlewareWithPath) {
-			this.hono.use(mw.path, mw.middleware)
-		}
 	}
 
 	/**
@@ -316,7 +310,7 @@ export class RouteManager {
 		const handlerMiddleware = ComponentManager.getHandlerMiddleware(controllerClass, handlerName)
 
 		// Get handler pipes
-		const handlerPipes = ComponentManager.getHandlerPipes(controllerClass, handlerName, fullPath)
+		const handlerPipes = ComponentManager.getHandlerPipes(controllerClass, handlerName)
 
 		// Register route in RouteRegistry
 		RouteRegistry.registerRoute({
@@ -339,7 +333,7 @@ export class RouteManager {
 				c.set('handlerName', String(handlerName))
 
 				// Get handler guards
-				const guards = ComponentManager.getHandlerGuards(controllerClass, handlerName, c.req.routePath)
+				const guards = ComponentManager.getHandlerGuards(controllerClass, handlerName)
 
 				// Check guards
 				for (const guard of guards) {
