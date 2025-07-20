@@ -29,10 +29,10 @@ interface HonestOptions {
 		version?: number | typeof VERSION_NEUTRAL | number[]
 	}
 	components?: {
-		middleware?: (MiddlewareType | ComponentWithpath<MiddlewareType>)[]
-		guards?: (GuardType | ComponentWithpath<GuardType>)[]
-		pipes?: (PipeType | ComponentWithpath<PipeType>)[]
-		filters?: (FilterType | ComponentWithpath<FilterType>)[]
+		middleware?: MiddlewareType[]
+		guards?: GuardType[]
+		pipes?: PipeType[]
+		filters?: FilterType[]
 	}
 	plugins?: PluginType[]
 	onError?: (error: Error, context: Context) => Response | Promise<Response>
@@ -213,19 +213,6 @@ interface ErrorResponse {
 }
 ```
 
-### Component Types
-
-#### `ComponentWithpath<T>`
-
-Configuration for components with path scoping:
-
-```typescript
-interface ComponentWithpath<T> {
-	path: string
-	component: T
-}
-```
-
 ## Type Definitions
 
 ### Component Types
@@ -339,6 +326,33 @@ class LoggerPlugin implements IPlugin {
 		// Plugin cleanup logic
 	}
 }
+```
+
+### Application Configuration
+
+```typescript
+import { Application } from '@honest/framework'
+
+const { app, hono } = await Application.create(AppModule, {
+	container: customContainer,
+	routing: {
+		prefix: '/api',
+		version: 1
+	},
+	components: {
+		middleware: [LoggerMiddleware, CorsMiddleware],
+		guards: [AuthGuard],
+		pipes: [ValidationPipe],
+		filters: [HttpExceptionFilter]
+	},
+	plugins: [LoggerPlugin],
+	onError: (error, context) => {
+		return context.json({ error: error.message }, 500)
+	},
+	notFound: (context) => {
+		return context.json({ message: 'Not found' }, 404)
+	}
+})
 ```
 
 ## Best Practices

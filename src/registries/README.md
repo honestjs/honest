@@ -21,6 +21,7 @@ The main metadata registry that stores all decorator and component information:
 - **Module configuration** - Stores module options and dependencies
 - **Parameter metadata** - Tracks parameter decorators and their configurations
 - **Component registrations** - Manages global, controller, and handler-level components
+- **Type definitions** - Defines ComponentType, ComponentInstance, and ComponentTypeMap
 
 ### `route.registry.ts`
 
@@ -34,6 +35,37 @@ The route registry that provides public access to route information:
 ### `index.ts`
 
 Export file that provides access to all registries.
+
+## Type Definitions
+
+### ComponentType
+
+Defines the available component types that can be registered:
+
+```typescript
+export type ComponentType = 'middleware' | 'guard' | 'pipe' | 'filter'
+```
+
+### ComponentInstance
+
+Union type of all possible component instances:
+
+```typescript
+export type ComponentInstance = MiddlewareType | GuardType | PipeType | FilterType
+```
+
+### ComponentTypeMap
+
+Maps component type identifiers to their specific instance types:
+
+```typescript
+export interface ComponentTypeMap {
+	middleware: MiddlewareType
+	guard: GuardType
+	pipe: PipeType
+	filter: FilterType
+}
+```
 
 ## Metadata Registry Features
 
@@ -109,24 +141,6 @@ MetadataRegistry.registerHandler('pipe', 'UsersController:getUser', TransformPip
 
 // Register handler-level filters
 MetadataRegistry.registerHandler('filter', 'UsersController:createUser', ValidationFilter)
-```
-
-### Path-Scoped Components
-
-Components applied to routes matching specific paths:
-
-```typescript
-// Register path-scoped middleware
-MetadataRegistry.registerGlobalWithPath('middleware', {
-	path: '/api',
-	component: ApiMiddleware
-})
-
-// Register path-scoped guards
-MetadataRegistry.registerGlobalWithPath('guard', {
-	path: '/admin',
-	component: AdminGuard
-})
 ```
 
 ### Service Registration
@@ -269,12 +283,6 @@ const adminRoutes = RouteRegistry.getRoutesByPath(/\/admin\//)
 MetadataRegistry.registerGlobal('middleware', CustomMiddleware)
 MetadataRegistry.registerController('guard', AdminController, AdminGuard)
 MetadataRegistry.registerHandler('pipe', 'UsersController:createUser', ValidationPipe)
-
-// Register path-scoped components
-MetadataRegistry.registerGlobalWithPath('middleware', {
-	path: '/api/v1',
-	component: V1Middleware
-})
 ```
 
 ### Service Management
@@ -303,8 +311,8 @@ console.log(
 2. **Register components appropriately** - Use the correct level (global, controller, handler) for components
 3. **Leverage route queries** - Use route registry methods for filtering and analysis
 4. **Maintain consistency** - Ensure metadata is consistent across the application
-5. **Use path scoping** - Apply components only where needed for better performance
-6. **Document routes** - Use route information for API documentation generation
+5. **Document routes** - Use route information for API documentation generation
+6. **Use type safety** - Leverage ComponentTypeMap for type-safe component registration
 
 ## Framework Integration
 

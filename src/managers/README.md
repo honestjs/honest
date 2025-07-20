@@ -19,6 +19,7 @@ The main component manager that handles all framework components:
 - **Component execution** - Manages the execution order of components
 - **Global component setup** - Configures application-wide components
 - **Module registration** - Handles module dependencies and service registration
+- **Exception handling** - Manages exception filters and error processing
 
 ### `route.manager.ts`
 
@@ -78,9 +79,8 @@ class UsersController {}
 Components are applied in a specific order:
 
 1. **Global components** - Applied to all routes
-2. **Path-scoped global components** - Applied to routes matching specific paths
-3. **Controller components** - Applied to all routes in a controller
-4. **Handler components** - Applied to specific route handlers
+2. **Controller components** - Applied to all routes in a controller
+3. **Handler components** - Applied to specific route handlers
 
 ### Module Registration
 
@@ -98,6 +98,27 @@ class AppModule {}
 // 1. Recursive import registration
 // 2. Service instantiation
 // 3. Controller collection
+```
+
+### Exception Handling
+
+Manages exception filters in a hierarchical manner:
+
+```typescript
+// Exception handling order:
+// 1. Handler-level filters
+// 2. Controller-level filters
+// 3. Global filters
+// 4. Default error response
+
+class CustomExceptionFilter implements IFilter {
+	catch(exception: Error, context: Context): Response | undefined {
+		if (exception.name === 'ValidationError') {
+			return context.json({ error: 'Validation failed' }, 400)
+		}
+		return undefined // Let other filters handle it
+	}
+}
 ```
 
 ## Route Manager Features
@@ -188,22 +209,6 @@ const { app, hono } = await Application.create(AppModule, {
 })
 ```
 
-### Path-Scoped Components
-
-```typescript
-import { Application } from '@honest/framework'
-
-const { app, hono } = await Application.create(AppModule, {
-	components: {
-		middleware: [
-			{ path: '/api', component: ApiMiddleware },
-			{ path: '/admin', component: AdminMiddleware }
-		],
-		guards: [{ path: '/admin', component: AdminGuard }]
-	}
-})
-```
-
 ### Custom Route Registration
 
 ```typescript
@@ -221,14 +226,47 @@ class UsersController {
 // GET /api/v2/users/:id (method version)
 ```
 
+### Exception Filter Setup
+
+```typescript
+@Controller('users')
+@UseFilters(ValidationExceptionFilter)
+class UsersController {
+	@UseFilters(CustomExceptionFilter)
+	@Post()
+	createUser(@Body() user: UserDto) {
+		// If an exception occurs, CustomExceptionFilter is tried first,
+		// then ValidationExceptionFilter, then global filters
+	}
+}
+```
+
+### Component Resolution
+
+```typescript
+// The ComponentManager automatically resolves components
+class LoggerMiddleware implements IMiddleware {
+	use(c: Context, next: Next): Promise<Response | void> {
+		console.log(`[${new Date().toISOString()}] ${c.req.method} ${c.req.path}`)
+		return next()
+	}
+}
+
+// Both class and instance are supported
+@UseMiddleware(LoggerMiddleware) // Class - will be instantiated
+@UseMiddleware(new LoggerMiddleware()) // Instance - used directly
+@Controller('users')
+class UsersController {}
+```
+
 ## Best Practices
 
 1. **Use component hierarchy** - Apply components at the appropriate level
 2. **Leverage global components** - Set up application-wide middleware and guards
 3. **Plan versioning strategy** - Use consistent versioning across related endpoints
 4. **Optimize component order** - Place frequently used components at higher levels
-5. **Use path scoping** - Apply components only where needed for better performance
-6. **Handle errors gracefully** - Use filters for consistent error handling
+5. **Handle errors gracefully** - Use filters for consistent error handling
+6. **Use type safety** - Leverage ComponentType and ComponentTypeMap for type-safe operations
 
 ## Framework Integration
 
@@ -248,3 +286,4 @@ Managers are central to the framework architecture:
 - **Cached metadata** - Route metadata is cached for better performance
 - **Minimal reflection** - Uses efficient reflection metadata access
 - **Memory management** - Automatic cleanup of unused references
+- **Exception filter optimization** - Filters are executed in order until one handles the exception
