@@ -306,7 +306,8 @@ export class ComponentManager {
 		// 4. If no filters handled the exception, create a default response
 		console.log('No filter handled the exception, creating default response')
 
-		return context.json(createErrorResponse(exception, context))
+		const { response, status } = createErrorResponse(exception, context)
+		return context.json(response, status)
 	}
 
 	/**

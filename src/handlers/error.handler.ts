@@ -13,7 +13,8 @@ export class ErrorHandler {
 	 */
 	static handle() {
 		return async (err: Error, c: Context) => {
-			return c.json(createErrorResponse(err, c))
+			const { response, status } = createErrorResponse(err, c)
+			return c.json(response, status)
 		}
 	}
 }
