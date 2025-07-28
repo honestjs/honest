@@ -9,6 +9,8 @@
 	},
 	"main": "dist/index.js",
 	"module": "dist/index.js",
+	"type": "module",
+	"types": "dist/index.d.ts",
 	"devDependencies": {
 		"@eslint/js": "^9.31.0",
 		"@types/bun": "^1.2.19",
@@ -61,7 +63,5 @@
 			"eslint --fix",
 			"prettier --write"
 		]
-	},
-	"type": "module",
-	"types": "dist/index.d.ts"
+	}
 }
