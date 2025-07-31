@@ -76,22 +76,16 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 
 ## Quick Start
 
-### Using Honest CLI _(Coming Soon)_
+### Using Honest CLI
 
 The fastest way to create a new Honest application is to use the Honest CLI:
 
 ```bash
 # Install Honest CLI globally
 bun add -g @honestjs/cli
-# or
-pnpm add -g @honestjs/cli
-# or
-yarn global add @honestjs/cli
-# or
-npm install -g @honestjs/cli
 
 # Create a new project
-honest new my-project
+honestjs new my-project # alias: honest, hnjs
 cd my-project
 
 # Start the development server
