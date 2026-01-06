@@ -5,9 +5,9 @@ import type { Constructor } from '../types'
  */
 export interface ArgumentMetadata {
 	/**
-	 * The type of argument (body, query, param, or custom)
+	 * The type of argument (body, query, param, header, request, response, context, variable, or custom)
 	 */
-	type: 'body' | 'query' | 'param' | 'custom'
+	type: 'body' | 'query' | 'param' | 'header' | 'request' | 'response' | 'context' | 'variable' | string
 
 	/**
 	 * The class type of the argument

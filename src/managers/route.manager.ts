@@ -1,7 +1,7 @@
 import type { Context, Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { VERSION_NEUTRAL } from '../constants'
-import type { DiContainer, RouteDefinition } from '../interfaces'
+import type { DiContainer, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from '../managers'
 import { MetadataRegistry, RouteRegistry } from '../registries'
 import type { Constructor } from '../types'
@@ -286,7 +286,7 @@ export class RouteManager {
 	private registerRoute(
 		controllerInstance: any,
 		route: RouteDefinition,
-		parameterMetadata: Map<string | symbol, any[]>,
+		parameterMetadata: Map<string | symbol, ParameterMetadata[]>,
 		contextIndices: Map<string | symbol, number>,
 		controllerClass: Constructor,
 		prefixSegment: string,
@@ -354,7 +354,7 @@ export class RouteManager {
 					const transformedValue = await ComponentManager.executePipes(
 						rawValue,
 						{
-							type: param.type,
+							type: param.name,
 							metatype: param.metatype,
 							data: param.data
 						},
