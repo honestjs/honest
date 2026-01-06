@@ -117,7 +117,7 @@ export class ComponentManager {
 	 * @param type - The type of component to get
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
-	 * ..returns An array of component instances
+	 * @returns An array of component instances
 	 */
 	static getComponents<T extends ComponentType>(
 		type: T,
@@ -144,7 +144,7 @@ export class ComponentManager {
 	/**
 	 * Resolves middleware classes or instances to middleware functions
 	 * @param middlewareItems - The middleware classes or instances to resolve
-	 * ..returns An array of middleware functions
+	 * @returns An array of middleware functions
 	 */
 	static resolveMiddleware(
 		middlewareItems: MiddlewareType[]
@@ -165,7 +165,7 @@ export class ComponentManager {
 	 * Gets middleware for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
-	 * ..returns An array of middleware functions
+	 * @returns An array of middleware functions
 	 */
 	static getHandlerMiddleware(
 		controller: Constructor,
@@ -177,7 +177,7 @@ export class ComponentManager {
 
 	/**
 	 * Gets global middleware
-	 * ..returns An array of middleware functions
+	 * @returns An array of middleware functions
 	 */
 	static getGlobalMiddleware(): ((c: Context, next: Next) => Promise<Response | void>)[] {
 		const globalMiddleware = Array.from(MetadataRegistry.getGlobal('middleware'))
@@ -189,7 +189,7 @@ export class ComponentManager {
 	/**
 	 * Resolves guard classes or instances to guard instances
 	 * @param guardItems - The guard classes or instances to resolve
-	 * ..returns An array of guard instances
+	 * @returns An array of guard instances
 	 */
 	static resolveGuards(guardItems: GuardType[]): IGuard[] {
 		return guardItems.map((guardItem) => {
@@ -207,7 +207,7 @@ export class ComponentManager {
 	 * Gets guards for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
-	 * ..returns An array of guard instances
+	 * @returns An array of guard instances
 	 */
 	static getHandlerGuards(controller: Constructor, handlerName: string | symbol): IGuard[] {
 		const guardItems = this.getComponents('guard', controller, handlerName)
@@ -219,7 +219,7 @@ export class ComponentManager {
 	/**
 	 * Resolves pipe classes or instances to pipe instances
 	 * @param pipeItems - The pipe classes or instances to resolve
-	 * ..returns An array of pipe instances
+	 * @returns An array of pipe instances
 	 */
 	static resolvePipes(pipeItems: PipeType[]): IPipe[] {
 		return pipeItems.map((pipeItem) => {
@@ -237,7 +237,7 @@ export class ComponentManager {
 	 * Gets pipes for a specific handler
 	 * @param controller - The controller class
 	 * @param handlerName - The handler method name
-	 * ..returns An array of pipe instances
+	 * @returns An array of pipe instances
 	 */
 	static getHandlerPipes(controller: Constructor, handlerName: string | symbol): IPipe[] {
 		const pipeItems = this.getComponents('pipe', controller, handlerName)
@@ -311,7 +311,7 @@ export class ComponentManager {
 	 * @param filterItems - The exception filter classes or instances to execute
 	 * @param exception - The exception that was thrown
 	 * @param context - The Hono context object
-	 * ..returns The response from the first filter that handles the exception or undefined if no filter handled it
+	 * @returns The response from the first filter that handles the exception or undefined if no filter handled it
 	 */
 	private static async executeFilters(
 		filterItems: FilterType[],
