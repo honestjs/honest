@@ -24,6 +24,26 @@ export class RouteRegistry {
 	 * @throws {Error} If the route information is invalid or incomplete
 	 */
 	static registerRoute(routeInfo: RouteInfo): void {
+		if (!routeInfo) {
+			throw new Error('Route info is required')
+		}
+
+		if (!routeInfo.controller) {
+			throw new Error('Route controller is required')
+		}
+
+		if (!routeInfo.handler) {
+			throw new Error('Route handler is required')
+		}
+
+		if (!routeInfo.method) {
+			throw new Error('Route method is required')
+		}
+
+		if (!routeInfo.fullPath) {
+			throw new Error('Route fullPath is required')
+		}
+
 		this.routes.push(routeInfo)
 	}
 
