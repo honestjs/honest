@@ -289,4 +289,34 @@ export class MetadataRegistry {
 		const typeMap = this.handler.get(type)!
 		return (typeMap.get(handlerKey) || []) as unknown as ComponentTypeMap[T][]
 	}
+
+	/**
+	 * Clears all registered metadata from the registry
+	 * Primarily used for testing and development purposes
+	 * Use with caution in production environments
+	 */
+	static clear(): void {
+		this.routes.clear()
+		this.controllers.clear()
+		this.controllerOptions.clear()
+		this.services.clear()
+		this.modules.clear()
+		this.parameters.clear()
+		this.contextIndices.clear()
+
+		// Clear global components
+		for (const set of this.global.values()) {
+			set.clear()
+		}
+
+		// Clear controller-level components
+		for (const map of this.controller.values()) {
+			map.clear()
+		}
+
+		// Clear handler-level components
+		for (const map of this.handler.values()) {
+			map.clear()
+		}
+	}
 }
