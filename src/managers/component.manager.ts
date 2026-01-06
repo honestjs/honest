@@ -14,8 +14,7 @@ import type {
 } from '../interfaces'
 import { type ComponentType, type ComponentTypeMap, MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
-
-const isObject = (val: unknown): val is Record<PropertyKey, unknown> => val !== null && typeof val === 'object'
+import { isObject } from '../utils'
 
 /**
  * Manager class for handling all component types in the Honest framework
