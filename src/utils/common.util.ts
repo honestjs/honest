@@ -133,11 +133,12 @@ export const normalizePath = (path?: string): string =>
 export const stripEndSlash = (path: string): string => (path.endsWith('/') ? path.slice(0, -1) : path)
 
 /**
- * Checks if a value is a constructor function
+ * Checks if a value is a constructor function (callable with `new`).
  * A constructor function must:
  * - Be a function
- * - Have a prototype
- * - Have prototype properties beyond the default ones
+ * - Have a non-null prototype (excludes arrow functions, which have no prototype)
+ * - Have a prototype that is not a function (excludes rare edge cases)
+ * - Have at least the built-in 'constructor' on prototype (so empty classes are constructors)
  *
  * @param val - The value to check
  * @returns True if the value is a constructor function, false otherwise
@@ -153,6 +154,6 @@ export const isConstructor = (val: unknown): boolean => {
 		isFunction(val) &&
 		!isNil(val.prototype) &&
 		!isFunction(val.prototype) &&
-		Object.getOwnPropertyNames(val.prototype).length > 1
+		Object.getOwnPropertyNames(val.prototype).length >= 1
 	)
 }

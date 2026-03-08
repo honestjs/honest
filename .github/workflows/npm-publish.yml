@@ -14,6 +14,7 @@ jobs:
                   bun-version: latest
                   registry-url: https://registry.npmjs.org/
             - run: bun install --frozen-lockfile
+            - run: bun run test
             - run: bun run build
             - run: npm publish
               env:

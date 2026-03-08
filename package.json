@@ -51,6 +51,8 @@
 	"scripts": {
 		"clean": "rm -rf dist",
 		"prepare": "husky",
+		"test": "bun test",
+		"test:watch": "bun test --watch",
 		"build": "bun run clean && bun build ./src/index.ts --outdir=dist --target=node --minify --external hono --external reflect-metadata && bun run build:types",
 		"build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
 		"lint": "eslint .",
