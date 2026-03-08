@@ -61,7 +61,7 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 
 > ⚠️ **Documentation is not yet complete** ⚠️
 >
-> If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+> If you find any issues or have suggestions for improvements, please open an issue or submit a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community guidelines.
 
 ## Features
 
