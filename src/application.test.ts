@@ -35,4 +35,14 @@ describe('Application', () => {
 		const body = await res.json()
 		expect(body).toEqual({ ok: true })
 	})
+
+	test('getContext() returns same instance and supports set/get', async () => {
+		const { app } = await Application.create(TestModule)
+		const ctx = app.getContext()
+		expect(ctx).toBe(app.getContext())
+
+		ctx.set('test.key', { value: 123 })
+		expect(ctx.get<{ value: number }>('test.key')).toEqual({ value: 123 })
+		expect(ctx.has('test.key')).toBe(true)
+	})
 })

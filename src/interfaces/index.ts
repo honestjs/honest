@@ -1,3 +1,4 @@
+export * from './application-context.interface'
 export * from './controller-options.interface'
 export * from './di-container.interface'
 export * from './error-response.interface'

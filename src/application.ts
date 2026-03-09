@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
+import { ApplicationContext } from './application-context'
 import { Container } from './di'
 import { ErrorHandler, NotFoundHandler } from './handlers'
-import type { DiContainer, HonestOptions, IPlugin, RouteInfo } from './interfaces'
+import type { DiContainer, HonestOptions, IApplicationContext, IPlugin, RouteInfo } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
 import { RouteRegistry } from './registries'
 import type { Constructor } from './types'
@@ -29,6 +30,7 @@ import { isConstructor, isObject } from './utils'
 export class Application {
 	private readonly hono: Hono
 	private readonly container: DiContainer
+	private readonly context: IApplicationContext
 	private readonly routeManager: RouteManager
 	private readonly options: HonestOptions
 
@@ -49,6 +51,9 @@ export class Application {
 
 		// Initialize container
 		this.container = this.options.container || new Container()
+
+		// App-level registry for plugins to share pipeline data by key
+		this.context = new ApplicationContext()
 
 		// Set up components and error handlers
 		this.setupComponents()
@@ -185,6 +190,21 @@ export class Application {
 	 */
 	getApp(): Hono {
 		return this.hono
+	}
+
+	/**
+	 * Gets the app-level registry (context) where your app can publish and read pipeline data by key.
+	 * Use namespaced keys (e.g. 'app.config', 'openapi.spec') and document contracts in your app.
+	 *
+	 * @returns The application context instance
+	 * @example
+	 * ```ts
+	 * app.getContext().set('app.config', { env: process.env.NODE_ENV })
+	 * const config = app.getContext().get<{ env: string }>('app.config')
+	 * ```
+	 */
+	getContext(): IApplicationContext {
+		return this.context
 	}
 
 	/**
