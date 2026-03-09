@@ -63,7 +63,7 @@ const { app, hono } = await Application.create(AppModule)
 
 ## Application context (registry)
 
-The app-level registry is a typed key-value store on `Application` for the whole app—bootstrap code, services, and plugins—to publish and read pipeline data by key.
+The app-level registry is a typed key-value store on `Application` for the whole app—bootstrap code, services, and plugins—to publish and read pipeline data by key. It is **not** the same as Hono’s request context: the former is app-scoped and lives for the app lifetime (`app.getContext()`); the latter is per-request and injected in handlers via `@Ctx()` (request/response, env, request-scoped variables). Use the application context for shared pipeline/config data; use the request context for data that is specific to the current HTTP request.
 
 - **Access**: `app.getContext()` returns the store. Use `get<T>(key)`, `set<T>(key, value)`, and optionally `has(key)`, `delete(key)`, `keys()`.
 - **Keys**: Use namespaced keys (e.g. `rpc.artifact`, `openapi.spec`, `graphql.schema`) to avoid collisions. Contracts and types are defined by whoever owns each key; Honest core does not mandate key names or value types.
