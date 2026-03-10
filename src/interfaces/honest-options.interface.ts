@@ -1,6 +1,6 @@
 import type { Context } from 'hono'
 import type { VERSION_NEUTRAL } from '../constants'
-import type { FilterType, GuardType, MiddlewareType, PipeType, PluginType } from '../interfaces'
+import type { FilterType, GuardType, MiddlewareType, PipeType, PluginEntry } from '../interfaces'
 import type { DiContainer } from './di-container.interface'
 
 /**
@@ -73,9 +73,10 @@ export interface HonestOptions {
 	}
 
 	/**
-	 * Plugins for extending the application functionality
+	 * Plugins for extending the application functionality.
+	 * Each entry can be a plain plugin or an object with plugin and optional pre/post processors.
 	 */
-	plugins?: PluginType[]
+	plugins?: PluginEntry[]
 
 	/**
 	 * Default exception handler to use when no filter matches

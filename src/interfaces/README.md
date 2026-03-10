@@ -166,6 +166,36 @@ interface IPlugin {
 }
 ```
 
+#### `PluginProcessor`
+
+Processor callback for plugin pre/post hooks. Receives `(app, hono, ctx)` where
+`ctx` is the application context (registry). Use `ctx.get` / `ctx.set` to share
+pipeline data.
+
+```typescript
+type PluginProcessor = (
+	app: Application,
+	hono: Hono,
+	ctx: IApplicationContext,
+) => void | Promise<void>;
+```
+
+#### `PluginEntryObject` and `PluginEntry`
+
+Wrap a plugin with optional `preProcessors` (run before lifecycle hooks) and
+`postProcessors` (run after). Plain `IPlugin` or `Constructor<IPlugin>` remain
+valid; they are the simple form of `PluginEntry`.
+
+```typescript
+interface PluginEntryObject {
+	plugin: IPlugin | Constructor<IPlugin>;
+	preProcessors?: PluginProcessor[];
+	postProcessors?: PluginProcessor[];
+}
+
+type PluginEntry = PluginType | PluginEntryObject;
+```
+
 ### Routing
 
 #### `RouteDefinition`

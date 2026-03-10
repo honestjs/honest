@@ -45,4 +45,51 @@ describe('Application', () => {
 		expect(ctx.get<{ value: number }>('test.key')).toEqual({ value: 123 })
 		expect(ctx.has('test.key')).toBe(true)
 	})
+
+	test('plain plugin without processors still works', async () => {
+		const order: string[] = []
+		const TestPlugin = {
+			beforeModulesRegistered: async () => {
+				order.push('before')
+			},
+			afterModulesRegistered: async () => {
+				order.push('after')
+			}
+		}
+		await Application.create(TestModule, { plugins: [TestPlugin] })
+		expect(order).toEqual(['before', 'after'])
+	})
+
+	test('plugin with preProcessors and postProcessors runs in correct order', async () => {
+		const order: string[] = []
+		const TestPlugin = {
+			beforeModulesRegistered: async () => {
+				order.push('before')
+			},
+			afterModulesRegistered: async () => {
+				order.push('after')
+			}
+		}
+		const pre1 = async (_app: unknown, _hono: unknown, ctx: { set: (k: string, v: string) => void }) => {
+			order.push('pre1')
+			ctx.set('plugin.order', 'pre1')
+		}
+		const pre2 = async () => {
+			order.push('pre2')
+		}
+		const post1 = async (_app: unknown, _hono: unknown, ctx: { get: (k: string) => unknown }) => {
+			order.push('post1')
+			expect(ctx.get('plugin.order')).toBe('pre1')
+		}
+		await Application.create(TestModule, {
+			plugins: [
+				{
+					plugin: TestPlugin,
+					preProcessors: [pre1, pre2],
+					postProcessors: [post1]
+				}
+			]
+		})
+		expect(order).toEqual(['pre1', 'pre2', 'before', 'after', 'post1'])
+	})
 })

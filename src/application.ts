@@ -2,7 +2,15 @@ import { Hono } from 'hono'
 import { ApplicationContext } from './application-context'
 import { Container } from './di'
 import { ErrorHandler, NotFoundHandler } from './handlers'
-import type { DiContainer, HonestOptions, IApplicationContext, IPlugin, RouteInfo } from './interfaces'
+import type {
+	DiContainer,
+	HonestOptions,
+	IApplicationContext,
+	IPlugin,
+	PluginEntry,
+	PluginProcessor,
+	RouteInfo
+} from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
 import { RouteRegistry } from './registries'
 import type { Constructor } from './types'
@@ -103,6 +111,36 @@ export class Application {
 	}
 
 	/**
+	 * Normalizes a plugin entry to a resolved plugin with pre/post processor arrays.
+	 * @param entry - Plugin entry (plain plugin or object with plugin and processors)
+	 * @returns Normalized entry with plugin instance and processor arrays
+	 * @private
+	 */
+	private normalizePluginEntry(entry: PluginEntry): {
+		plugin: IPlugin
+		preProcessors: PluginProcessor[]
+		postProcessors: PluginProcessor[]
+	} {
+		if (entry && typeof entry === 'object' && 'plugin' in entry) {
+			const obj = entry as {
+				plugin: IPlugin | Constructor<IPlugin>
+				preProcessors?: PluginProcessor[]
+				postProcessors?: PluginProcessor[]
+			}
+			return {
+				plugin: this.resolvePlugin(obj.plugin),
+				preProcessors: obj.preProcessors ?? [],
+				postProcessors: obj.postProcessors ?? []
+			}
+		}
+		return {
+			plugin: this.resolvePlugin(entry as IPlugin | Constructor<IPlugin>),
+			preProcessors: [],
+			postProcessors: []
+		}
+	}
+
+	/**
 	 * Registers a module with the application
 	 * Processes the module's metadata and registers its controllers
 	 *
@@ -155,10 +193,14 @@ export class Application {
 		options: HonestOptions = {}
 	): Promise<{ app: Application; hono: Hono }> {
 		const app = new Application(options)
-		const plugins = (options.plugins || []).map((pluginType) => app.resolvePlugin(pluginType))
+		const entries = (options.plugins || []).map((entry) => app.normalizePluginEntry(entry))
+		const ctx = app.getContext()
 
-		// Run beforeModulesRegistered hooks for all plugins
-		for (const plugin of plugins) {
+		// Phase 1: preProcessors then beforeModulesRegistered for each entry
+		for (const { plugin, preProcessors } of entries) {
+			for (const fn of preProcessors) {
+				await fn(app, app.hono, ctx)
+			}
 			if (plugin.beforeModulesRegistered) {
 				await plugin.beforeModulesRegistered(app, app.hono)
 			}
@@ -167,10 +209,13 @@ export class Application {
 		// Register the root module and its routes
 		await app.register(rootModule)
 
-		// Run afterModulesRegistered hooks for all plugins
-		for (const plugin of plugins) {
+		// Phase 2: afterModulesRegistered then postProcessors for each entry
+		for (const { plugin, postProcessors } of entries) {
 			if (plugin.afterModulesRegistered) {
 				await plugin.afterModulesRegistered(app, app.hono)
+			}
+			for (const fn of postProcessors) {
+				await fn(app, app.hono, ctx)
 			}
 		}
 
