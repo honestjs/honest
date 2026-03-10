@@ -42,8 +42,8 @@ describe('ApplicationContext', () => {
 	test('get with wrong type returns value at runtime (caller responsibility)', () => {
 		const ctx = new ApplicationContext()
 		ctx.set('str', 'hello')
-		// Cast to number at runtime is still the string - type erasure
+		// Type param is for caller only; at runtime the stored value is still the string
 		const asNumber = ctx.get<number>('str')
-		expect(asNumber).toBe('hello')
+		expect(asNumber as unknown).toBe('hello')
 	})
 })
