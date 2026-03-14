@@ -4,10 +4,10 @@ Contributions are welcome! Here are ways you can help.
 
 ## Ways to contribute
 
-- **Create an issue** — Propose a new feature or report a bug.
-- **Open a pull request** — Fix a bug or typo, refactor code, or improve docs.
-- **Share** — Write about Honest on your blog, X, or elsewhere.
-- **Build with Honest** — Use Honest in your projects and share feedback.
+- **Create an issue** - Propose a new feature or report a bug.
+- **Open a pull request** - Fix a bug or typo, refactor code, or improve docs.
+- **Share** - Write about Honest on your blog, X, or elsewhere.
+- **Build with Honest** - Use Honest in your projects and share feedback.
 
 ## Early development note
 
