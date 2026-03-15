@@ -334,20 +334,36 @@ export class ComponentManager {
 				if (result !== undefined) {
 					return result as Response
 				}
-			} catch (error) {
-				console.error('Error in exception filter:', error)
+			} catch (filterError) {
+				const filterName = filter.constructor?.name || 'UnknownFilter'
+				console.error(`Error in exception filter ${filterName}:`, filterError)
+
+				const { response, status } = createErrorResponse(filterError as Error, context)
+				return context.json(response, status)
 			}
 		}
 		return undefined
 	}
 
 	/**
-	 * Registers a module and its dependencies with the container
+	 * Registers a module and its dependencies with the container.
+	 * Tracks already-registered modules to prevent duplicate processing
+	 * in diamond dependency graphs (e.g. A imports B and C, both import D).
 	 * @param moduleClass - The module class to register
 	 * @param container - The dependency injection container
+	 * @param registered - Set of modules already processed in this registration pass
 	 * @returns An array of controller classes registered from this module
 	 */
-	static async registerModule(moduleClass: Constructor, container: DiContainer): Promise<Constructor[]> {
+	static async registerModule(
+		moduleClass: Constructor,
+		container: DiContainer,
+		registered = new Set<Constructor>()
+	): Promise<Constructor[]> {
+		if (registered.has(moduleClass)) {
+			return []
+		}
+		registered.add(moduleClass)
+
 		const moduleOptions = MetadataRegistry.getModuleOptions(moduleClass)
 
 		if (!moduleOptions) {
@@ -359,7 +375,7 @@ export class ComponentManager {
 		// Register imported modules recursively
 		if (moduleOptions.imports && moduleOptions.imports.length > 0) {
 			for (const importedModule of moduleOptions.imports) {
-				const importedControllers = await this.registerModule(importedModule, container)
+				const importedControllers = await this.registerModule(importedModule, container, registered)
 				controllers.push(...importedControllers)
 			}
 		}

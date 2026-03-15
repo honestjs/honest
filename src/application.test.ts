@@ -1,8 +1,9 @@
 import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Application } from './application'
-import { Body, Controller, Get, Module, Post } from './decorators'
+import { Body, Controller, Get, Module, Post, Service, UseFilters } from './decorators'
 import { createParamDecorator } from './helpers'
+import type { IFilter, IGuard } from './interfaces'
 import { RouteRegistry } from './registries/route.registry'
 
 @Controller('/health')
@@ -237,5 +238,107 @@ describe('Application', () => {
 
 	test('fails startup on duplicate method/path routes', async () => {
 		await expect(Application.create(DuplicateRoutesModule)).rejects.toThrow('Duplicate route detected')
+	})
+
+	// --- Phase 1 bug fix tests ---
+
+	test('global guards do not leak between sequential Application.create() calls', async () => {
+		let guardCalled = false
+		const LeakyGuard: IGuard = {
+			canActivate() {
+				guardCalled = true
+				return false
+			}
+		}
+
+		// First app: register a global guard that rejects everything
+		await Application.create(OnlyAModule, {
+			components: { guards: [LeakyGuard] }
+		})
+
+		guardCalled = false
+
+		// Second app: no global guard — the guard from the first app must NOT leak
+		const { hono } = await Application.create(OnlyBModule)
+		const res = await hono.request(new Request('http://localhost/only-b'))
+
+		expect(guardCalled).toBe(false)
+		expect(res.status).toBe(200)
+	})
+
+	test('shared module imported by two parents is registered only once (deduplication)', async () => {
+		@Service()
+		class SharedService {
+			value = Math.random()
+		}
+
+		@Controller('/shared')
+		class SharedController {
+			@Get()
+			index() {
+				return { ok: true }
+			}
+		}
+
+		@Module({ controllers: [SharedController], services: [SharedService] })
+		class SharedModule {}
+
+		@Controller('/branch-a')
+		class BranchAController {
+			@Get()
+			index() {
+				return { branch: 'a' }
+			}
+		}
+
+		@Module({ controllers: [BranchAController], imports: [SharedModule] })
+		class BranchAModule {}
+
+		@Controller('/branch-b')
+		class BranchBController {
+			@Get()
+			index() {
+				return { branch: 'b' }
+			}
+		}
+
+		@Module({ controllers: [BranchBController], imports: [SharedModule] })
+		class BranchBModule {}
+
+		@Module({ imports: [BranchAModule, BranchBModule] })
+		class DiamondRootModule {}
+
+		// Should not throw "Duplicate route detected" for /shared
+		const { app } = await Application.create(DiamondRootModule)
+		const routes = app.getRoutes()
+		const sharedRoutes = routes.filter((r) => r.fullPath.includes('/shared'))
+		expect(sharedRoutes.length).toBe(1)
+	})
+
+	test('filter that throws returns a 500 instead of silently swallowing', async () => {
+		const BrokenFilter: IFilter = {
+			catch(): Response {
+				throw new Error('filter exploded')
+			}
+		}
+
+		@Controller('/filter-err')
+		@UseFilters(BrokenFilter)
+		class FilterErrorController {
+			@Get()
+			index() {
+				throw new Error('original error')
+			}
+		}
+
+		@Module({ controllers: [FilterErrorController] })
+		class FilterErrorModule {}
+
+		const { hono } = await Application.create(FilterErrorModule)
+		const res = await hono.request(new Request('http://localhost/filter-err'))
+
+		expect(res.status).toBe(500)
+		const body = await res.json()
+		expect(body.message).toContain('filter exploded')
 	})
 })

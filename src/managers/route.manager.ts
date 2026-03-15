@@ -355,8 +355,10 @@ export class RouteManager {
 					}
 				}
 
-				// Prepare arguments based on parameter decorators
-				const args = new Array(handler.length)
+				// Prepare arguments — size must cover both the function's declared
+				// parameter count and the highest decorator-assigned index.
+				const maxDecoratorIndex = handlerParams.length > 0 ? Math.max(...handlerParams.map((p) => p.index)) : -1
+				const args = new Array(Math.max(handler.length, maxDecoratorIndex + 1))
 
 				for (const param of handlerParams) {
 					if (typeof param.factory !== 'function') {

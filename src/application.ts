@@ -12,7 +12,7 @@ import type {
 	RouteInfo
 } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
-import { RouteRegistry } from './registries'
+import { MetadataRegistry, RouteRegistry } from './registries'
 import type { Constructor } from './types'
 import { isConstructor, isObject } from './utils'
 
@@ -54,9 +54,10 @@ export class Application {
 	constructor(options: HonestOptions = {}) {
 		this.options = isObject(options) ? options : {}
 
-		// Route registry is process-level static state; clear per app instance
-		// so getRoutes() reflects only this app.
+		// Static registries are process-level state; clear per app instance
+		// so each app starts with a clean slate for runtime data.
 		RouteRegistry.clear()
+		MetadataRegistry.clearGlobalComponents()
 
 		// Initialize app with Hono options
 		this.hono = new Hono(this.options.hono)

@@ -298,6 +298,19 @@ export class MetadataRegistry {
 	}
 
 	/**
+	 * Clears global-level components only (middleware, guards, pipes, filters).
+	 * Called per Application instance to prevent global components from one app
+	 * leaking into the next. Does NOT clear decorator metadata (routes,
+	 * controllers, services, modules, parameters, context indices) since those
+	 * are set at class-definition time and shared across all apps.
+	 */
+	static clearGlobalComponents(): void {
+		for (const set of this.global.values()) {
+			set.clear()
+		}
+	}
+
+	/**
 	 * Clears all registered metadata from the registry
 	 * Primarily used for testing and development purposes
 	 * Use with caution in production environments
@@ -312,9 +325,7 @@ export class MetadataRegistry {
 		this.contextIndices.clear()
 
 		// Clear global components
-		for (const set of this.global.values()) {
-			set.clear()
-		}
+		this.clearGlobalComponents()
 
 		// Clear controller-level components
 		for (const map of this.controller.values()) {
