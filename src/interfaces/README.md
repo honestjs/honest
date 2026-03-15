@@ -207,7 +207,6 @@ interface RouteDefinition {
 	path: string;
 	method: string;
 	handlerName: string | symbol;
-	parameterMetadata: ParameterMetadata[];
 	version?: number | null | typeof VERSION_NEUTRAL | number[];
 	prefix?: string | null;
 }

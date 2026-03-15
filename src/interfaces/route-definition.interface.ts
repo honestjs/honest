@@ -1,5 +1,4 @@
 import type { VERSION_NEUTRAL } from '../constants'
-import type { ParameterMetadata } from '../interfaces'
 
 /**
  * Internal metadata for defining a route. This interface is used by the framework
@@ -31,11 +30,6 @@ export interface RouteDefinition {
 	 * Name of the method in the controller class that handles this route
 	 */
 	handlerName: string | symbol
-	/**
-	 * Metadata about the parameters of the handler method,
-	 * including decorators like @Body(), @Param(), @Query(), etc.
-	 */
-	parameterMetadata: ParameterMetadata[]
 	/**
 	 * Route-specific API version, overrides controller and global version.
 	 *

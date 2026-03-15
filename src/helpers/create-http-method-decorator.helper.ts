@@ -21,12 +21,10 @@ export function createHttpMethodDecorator(method: string) {
 		return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
 			const controllerClass = target.constructor
 
-			// Add route definition
 			MetadataRegistry.addRoute(controllerClass, {
 				path,
 				method,
 				handlerName: propertyKey,
-				parameterMetadata: [],
 				version: options.version,
 				prefix: options.prefix
 			})
