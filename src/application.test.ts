@@ -1,7 +1,8 @@
 import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Application } from './application'
-import { Controller, Get, Module } from './decorators'
+import { Body, Controller, Get, Module, Post } from './decorators'
+import { createParamDecorator } from './helpers'
 import { RouteRegistry } from './registries/route.registry'
 
 @Controller('/health')
@@ -14,6 +15,97 @@ class TestController {
 
 @Module({ controllers: [TestController] })
 class TestModule {}
+
+@Controller('/payload')
+class PayloadController {
+	@Post('echo')
+	async echo(@Body('a') a: string, @Body('b') b: string) {
+		return { a, b }
+	}
+}
+
+@Module({ controllers: [PayloadController] })
+class PayloadModule {}
+
+@Controller('/raw')
+class RawResponseController {
+	@Get()
+	raw() {
+		return new Response('raw-ok', {
+			status: 201,
+			headers: { 'x-honest': 'yes' }
+		})
+	}
+}
+
+@Module({ controllers: [RawResponseController] })
+class RawResponseModule {}
+
+@Controller('/only-a')
+class OnlyAController {
+	@Get()
+	index() {
+		return { app: 'a' }
+	}
+}
+
+@Module({ controllers: [OnlyAController] })
+class OnlyAModule {}
+
+@Controller('/only-b')
+class OnlyBController {
+	@Get()
+	index() {
+		return { app: 'b' }
+	}
+}
+
+@Module({ controllers: [OnlyBController] })
+class OnlyBModule {}
+
+class UndecoratedController {
+	hello() {
+		return 'hello'
+	}
+}
+
+@Module({ controllers: [UndecoratedController] })
+class BrokenControllerModule {}
+
+@Module()
+class EmptyModule {}
+
+@Controller('/dup')
+class DuplicateAController {
+	@Get()
+	index() {
+		return { ok: 'a' }
+	}
+}
+
+@Controller('/dup')
+class DuplicateBController {
+	@Get()
+	index() {
+		return { ok: 'b' }
+	}
+}
+
+@Module({ controllers: [DuplicateAController, DuplicateBController] })
+class DuplicateRoutesModule {}
+
+const UnsafeParam = createParamDecorator('unsafe')
+
+@Controller('/unsafe')
+class UnsafeParamController {
+	@Get()
+	check(@UnsafeParam() value: unknown) {
+		return { hasValue: value !== undefined }
+	}
+}
+
+@Module({ controllers: [UnsafeParamController] })
+class UnsafeParamModule {}
 
 describe('Application', () => {
 	afterEach(() => {
@@ -91,5 +183,59 @@ describe('Application', () => {
 			]
 		})
 		expect(order).toEqual(['pre1', 'pre2', 'before', 'after', 'post1'])
+	})
+
+	test('@Body() values are readable multiple times in one handler', async () => {
+		const { hono } = await Application.create(PayloadModule)
+		const res = await hono.request(
+			new Request('http://localhost/payload/echo', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ a: 'x', b: 'y' })
+			})
+		)
+
+		expect(res.status).toBe(200)
+		expect(await res.json()).toEqual({ a: 'x', b: 'y' })
+	})
+
+	test('handlers can return native Response without @Ctx()', async () => {
+		const { hono } = await Application.create(RawResponseModule)
+		const res = await hono.request(new Request('http://localhost/raw'))
+
+		expect(res.status).toBe(201)
+		expect(res.headers.get('x-honest')).toBe('yes')
+		expect(await res.text()).toBe('raw-ok')
+	})
+
+	test('creating a new app resets RouteRegistry route list', async () => {
+		const { app: appA } = await Application.create(OnlyAModule)
+		expect(appA.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(true)
+
+		const { app: appB } = await Application.create(OnlyBModule)
+		expect(appB.getRoutes().some((route) => route.fullPath.includes('/only-b'))).toBe(true)
+		expect(appB.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(false)
+	})
+
+	test('custom param decorator without factory uses safe fallback', async () => {
+		const { hono } = await Application.create(UnsafeParamModule)
+		const res = await hono.request(new Request('http://localhost/unsafe'))
+
+		expect(res.status).toBe(200)
+		expect(await res.json()).toEqual({ hasValue: true })
+	})
+
+	test('fails with clear message for controllers missing @Controller()', async () => {
+		await expect(Application.create(BrokenControllerModule)).rejects.toThrow('is not decorated with @Controller()')
+	})
+
+	test('strict.requireRoutes fails startup when no routes are registered', async () => {
+		await expect(Application.create(EmptyModule, { strict: { requireRoutes: true } })).rejects.toThrow(
+			'Strict mode: no routes were registered'
+		)
+	})
+
+	test('fails startup on duplicate method/path routes', async () => {
+		await expect(Application.create(DuplicateRoutesModule)).rejects.toThrow('Duplicate route detected')
 	})
 })

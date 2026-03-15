@@ -54,6 +54,10 @@ export class Application {
 	constructor(options: HonestOptions = {}) {
 		this.options = isObject(options) ? options : {}
 
+		// Route registry is process-level static state; clear per app instance
+		// so getRoutes() reflects only this app.
+		RouteRegistry.clear()
+
 		// Initialize app with Hono options
 		this.hono = new Hono(this.options.hono)
 
@@ -72,6 +76,10 @@ export class Application {
 			prefix: this.options.routing?.prefix,
 			version: this.options.routing?.version
 		})
+
+		if (this.options.deprecations?.printPreV1Warning) {
+			console.warn('[HonestJS] Pre-v1 warning: APIs may change before 1.0.0.')
+		}
 	}
 
 	/**
@@ -195,6 +203,16 @@ export class Application {
 		const app = new Application(options)
 		const entries = (options.plugins || []).map((entry) => app.normalizePluginEntry(entry))
 		const ctx = app.getContext()
+		const debug = options.debug
+		const debugPlugins = debug === true || (typeof debug === 'object' && debug.plugins)
+		const debugRoutes = debug === true || (typeof debug === 'object' && debug.routes)
+
+		if (debugPlugins && entries.length > 0) {
+			console.info(
+				'[HonestJS] Plugin order:',
+				entries.map(({ plugin }) => plugin.constructor?.name || 'AnonymousPlugin').join(' -> ')
+			)
+		}
 
 		// Phase 1: preProcessors then beforeModulesRegistered for each entry
 		for (const { plugin, preProcessors } of entries) {
@@ -208,6 +226,17 @@ export class Application {
 
 		// Register the root module and its routes
 		await app.register(rootModule)
+
+		const routes = app.getRoutes()
+		if (options.strict?.requireRoutes && routes.length === 0) {
+			throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
+		}
+		if (debugRoutes) {
+			console.info(
+				'[HonestJS] Registered routes:',
+				routes.map((route) => `${route.method.toUpperCase()} ${route.fullPath}`)
+			)
+		}
 
 		// Phase 2: afterModulesRegistered then postProcessors for each entry
 		for (const { plugin, postProcessors } of entries) {

@@ -47,4 +47,23 @@ describe('Container', () => {
 		container.register(Service, instance)
 		expect(container.resolve(Service)).toBe(instance)
 	})
+
+	test('resolve() throws clear error when constructor metadata is missing', () => {
+		class NeedsDep {
+			constructor(_dep: unknown) {}
+		}
+
+		const container = new Container()
+		expect(() => container.resolve(NeedsDep)).toThrow('constructor metadata is missing')
+	})
+
+	test('resolve() throws clear error for non-class dependency metadata', () => {
+		class BadDepController {
+			constructor(_dep: unknown) {}
+		}
+		Reflect.defineMetadata('design:paramtypes', [Object], BadDepController)
+
+		const container = new Container()
+		expect(() => container.resolve(BadDepController)).toThrow('Cannot resolve dependency at index 0')
+	})
 })

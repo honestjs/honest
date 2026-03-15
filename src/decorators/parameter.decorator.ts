@@ -5,8 +5,15 @@ import { createParamDecorator } from '../helpers'
  * @param data - Optional property name to extract from the body
  */
 export const Body = createParamDecorator('body', async (data, ctx) => {
-	const body = await ctx.req.json()
-	return data ? body[data] : body
+	let body = ctx.get('__honest.body.cache') as unknown
+	if (body === undefined) {
+		body = await ctx.req.json()
+		ctx.set('__honest.body.cache', body)
+	}
+	if (data && body && typeof body === 'object') {
+		return (body as Record<string, unknown>)[String(data)]
+	}
+	return body
 })
 
 /**

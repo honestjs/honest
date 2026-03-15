@@ -8,6 +8,33 @@ import type { DiContainer } from './di-container.interface'
  */
 export interface HonestOptions {
 	/**
+	 * Enable debug logging for startup diagnostics.
+	 * - `true` enables all debug logs
+	 * - object form enables specific categories
+	 */
+	debug?: boolean | { routes?: boolean; plugins?: boolean }
+
+	/**
+	 * Optional strict-mode checks for startup validation.
+	 */
+	strict?: {
+		/**
+		 * When enabled, startup fails if no routes were registered.
+		 */
+		requireRoutes?: boolean
+	}
+
+	/**
+	 * Optional warnings for unstable/deprecated behavior.
+	 */
+	deprecations?: {
+		/**
+		 * Print pre-v1 instability warning during startup.
+		 */
+		printPreV1Warning?: boolean
+	}
+
+	/**
 	 * Container instance for dependency injection
 	 */
 	container?: DiContainer

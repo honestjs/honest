@@ -44,6 +44,16 @@ export class RouteRegistry {
 			throw new Error('Route fullPath is required')
 		}
 
+		const isDuplicate = this.routes.some(
+			(route) =>
+				route.fullPath === routeInfo.fullPath && route.method.toUpperCase() === routeInfo.method.toUpperCase()
+		)
+		if (isDuplicate) {
+			throw new Error(
+				`Duplicate route detected: ${routeInfo.method.toUpperCase()} ${routeInfo.fullPath} (${String(routeInfo.controller)}.${String(routeInfo.handler)})`
+			)
+		}
+
 		this.routes.push(routeInfo)
 	}
 

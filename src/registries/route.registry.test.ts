@@ -63,6 +63,13 @@ describe('RouteRegistry', () => {
 				'Route fullPath is required'
 			)
 		})
+
+		test('throws when a duplicate method/path route is registered', () => {
+			RouteRegistry.registerRoute(makeRouteInfo({ method: 'GET', fullPath: '/dup' }))
+			expect(() => RouteRegistry.registerRoute(makeRouteInfo({ method: 'GET', fullPath: '/dup' }))).toThrow(
+				'Duplicate route detected'
+			)
+		})
 	})
 
 	describe('getRoutesByController', () => {

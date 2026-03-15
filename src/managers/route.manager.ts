@@ -144,6 +144,10 @@ export class RouteManager {
 	 *    - Guard validation
 	 */
 	async registerController(controllerClass: Constructor): Promise<void> {
+		if (!MetadataRegistry.hasController(controllerClass)) {
+			throw new Error(`Controller ${controllerClass.name} is not decorated with @Controller()`)
+		}
+
 		const controllerPath = MetadataRegistry.getControllerPath(controllerClass) || ''
 		const controllerOptions = MetadataRegistry.getControllerOptions(controllerClass) || {}
 		const routes = MetadataRegistry.getRoutes(controllerClass) || []
@@ -163,6 +167,12 @@ export class RouteManager {
 		// Allow opting out of versioning by setting version to null
 		const effectiveControllerVersion =
 			controllerOptions.version !== undefined ? controllerOptions.version : this.globalVersion
+
+		if (routes.length === 0) {
+			throw new Error(
+				`Controller ${controllerClass.name} has no route handlers. Add HTTP method decorators like @Get()`
+			)
+		}
 
 		// Register routes
 		for (const route of routes) {
@@ -339,7 +349,9 @@ export class RouteManager {
 				for (const guard of guards) {
 					const canActivate = await guard.canActivate(c)
 					if (!canActivate) {
-						throw new HTTPException(403, { message: 'Forbidden' })
+						throw new HTTPException(403, {
+							message: `Forbidden by ${guard.constructor?.name || 'UnknownGuard'} at ${controllerClass.name}.${String(handlerName)}`
+						})
 					}
 				}
 
@@ -347,6 +359,12 @@ export class RouteManager {
 				const args = new Array(handler.length)
 
 				for (const param of handlerParams) {
+					if (typeof param.factory !== 'function') {
+						throw new Error(
+							`Invalid parameter decorator metadata for ${controllerClass.name}.${String(handlerName)}`
+						)
+					}
+
 					// Get the raw value from the parameter decorator
 					const rawValue = param.factory(param.data, c)
 
@@ -370,6 +388,11 @@ export class RouteManager {
 				// If a context index is present, it means the handler might have used the context directly
 				// In this case, we don't do any additional serialization
 				if (contextIndex !== undefined) {
+					return result
+				}
+
+				// If the handler already returned a full Response, pass it through untouched.
+				if (result instanceof Response) {
 					return result
 				}
 

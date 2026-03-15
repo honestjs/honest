@@ -31,9 +31,19 @@ export class Container implements DiContainer {
 
 		// Get constructor parameters metadata
 		const paramTypes = Reflect.getMetadata('design:paramtypes', target) || []
+		if (target.length > 0 && paramTypes.length === 0) {
+			throw new Error(
+				`Cannot resolve dependencies for ${target.name}: constructor metadata is missing. Ensure 'reflect-metadata' is imported and 'emitDecoratorMetadata' is enabled.`
+			)
+		}
 
 		// Resolve dependencies recursively
-		const dependencies = paramTypes.map((paramType: Constructor) => {
+		const dependencies = paramTypes.map((paramType: Constructor, index: number) => {
+			if (!paramType || paramType === Object || paramType === Array || paramType === Function) {
+				throw new Error(
+					`Cannot resolve dependency at index ${index} of ${target.name}. Use concrete class types for constructor dependencies.`
+				)
+			}
 			return this.resolve(paramType, new Set(resolving))
 		})
 

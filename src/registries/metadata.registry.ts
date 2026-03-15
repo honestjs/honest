@@ -151,6 +151,13 @@ export class MetadataRegistry {
 	}
 
 	/**
+	 * Check if a class is registered as a controller.
+	 */
+	static hasController(controller: Constructor): boolean {
+		return this.controllers.has(controller)
+	}
+
+	/**
 	 * Set controller path
 	 */
 	static setControllerPath(controller: Constructor, path: string): void {

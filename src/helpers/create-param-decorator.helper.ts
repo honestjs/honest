@@ -18,6 +18,15 @@ import type { Constructor } from '../types'
  * ```
  */
 export function createParamDecorator<T = any>(type: string, factory?: (data: any, ctx: Context) => T) {
+	const fallbackFactory = (data: any, ctx: Context): unknown => {
+		// Safe default when a custom decorator doesn't provide a factory.
+		// Returning context keeps the value usable and avoids hard runtime crashes.
+		if (data === undefined) {
+			return ctx
+		}
+		return ctx.get(data)
+	}
+
 	return (data?: any) => {
 		// eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
 		return (target: Object, propertyKey: string | symbol, parameterIndex: number): void => {
@@ -45,7 +54,7 @@ export function createParamDecorator<T = any>(type: string, factory?: (data: any
 				index: parameterIndex,
 				name: type,
 				data,
-				factory,
+				factory: (factory || fallbackFactory) as (data: any, ctx: Context) => any,
 				metatype
 			} as ParameterMetadata)
 
