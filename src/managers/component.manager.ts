@@ -34,6 +34,14 @@ export class ComponentManager {
 		this.container = container
 	}
 
+	private static assertInitialized(): void {
+		if (!this.container) {
+			throw new Error(
+				'ComponentManager is not initialized. Ensure Application is created before resolving components.'
+			)
+		}
+	}
+
 	/**
 	 * Configures global components from application options
 	 * Global components are applied to all routes in the application
@@ -45,7 +53,12 @@ export class ComponentManager {
 	 * @param options.components.filters - Optional array of global filters
 	 */
 	static setupGlobalComponents(options: {
-		components?: { middleware?: any[]; guards?: any[]; pipes?: any[]; filters?: any[] }
+		components?: {
+			middleware?: MiddlewareType[]
+			guards?: GuardType[]
+			pipes?: PipeType[]
+			filters?: FilterType[]
+		}
 	}): void {
 		const components = options.components || {}
 
@@ -149,13 +162,12 @@ export class ComponentManager {
 	static resolveMiddleware(
 		middlewareItems: MiddlewareType[]
 	): ((c: Context, next: Next) => Promise<Response | void>)[] {
+		this.assertInitialized()
 		return middlewareItems.map((middlewareItem) => {
-			// Check if the middleware is already an instance
 			if (isObject(middlewareItem) && 'use' in middlewareItem) {
 				return (middlewareItem as IMiddleware).use.bind(middlewareItem)
 			}
 
-			// Otherwise, resolve the class to an instance
 			const middleware = this.container.resolve(middlewareItem as Constructor<IMiddleware>)
 			return middleware.use.bind(middleware)
 		})
@@ -192,13 +204,12 @@ export class ComponentManager {
 	 * @returns An array of guard instances
 	 */
 	static resolveGuards(guardItems: GuardType[]): IGuard[] {
+		this.assertInitialized()
 		return guardItems.map((guardItem) => {
-			// Check if the guard is already an instance
 			if (isObject(guardItem) && 'canActivate' in guardItem) {
 				return guardItem as IGuard
 			}
 
-			// Otherwise, resolve the class to an instance
 			return this.container.resolve(guardItem as Constructor<IGuard>)
 		})
 	}
@@ -222,13 +233,12 @@ export class ComponentManager {
 	 * @returns An array of pipe instances
 	 */
 	static resolvePipes(pipeItems: PipeType[]): IPipe[] {
+		this.assertInitialized()
 		return pipeItems.map((pipeItem) => {
-			// Check if the pipe is already an instance
 			if (isObject(pipeItem) && 'transform' in pipeItem) {
 				return pipeItem as IPipe
 			}
 
-			// Otherwise, resolve the class to an instance
 			return this.container.resolve(pipeItem as Constructor<IPipe>)
 		})
 	}
@@ -274,8 +284,8 @@ export class ComponentManager {
 	 */
 	static async handleException(exception: Error, context: Context): Promise<Response | undefined> {
 		// Get controller from context
-		const controller = context.get('controllerClass') as Constructor | undefined
-		const handlerName = context.get('handlerName') as string | undefined
+		const controller = context.get('__honest_controllerClass') as Constructor | undefined
+		const handlerName = context.get('__honest_handlerName') as string | undefined
 
 		// 1. Try handler-level filters first if we have the handler information
 		if (controller && handlerName) {
@@ -318,14 +328,13 @@ export class ComponentManager {
 		exception: Error,
 		context: Context
 	): Promise<Response | undefined> {
+		this.assertInitialized()
 		for (const filterItem of filterItems) {
 			let filter: IFilter
 
-			// Check if the filter is already an instance
 			if (isObject(filterItem) && 'catch' in filterItem) {
 				filter = filterItem as IFilter
 			} else {
-				// Otherwise, resolve the class to an instance
 				filter = this.container.resolve(filterItem as Constructor<IFilter>)
 			}
 

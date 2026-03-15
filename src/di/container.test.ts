@@ -1,5 +1,6 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
+import { Service } from '../decorators'
 import { Container } from './container'
 
 describe('Container', () => {
@@ -48,13 +49,25 @@ describe('Container', () => {
 		expect(container.resolve(Service)).toBe(instance)
 	})
 
-	test('resolve() throws clear error when constructor metadata is missing', () => {
+	test('resolve() tells you to add @Service() when decorator is missing', () => {
 		class NeedsDep {
 			constructor(_dep: unknown) {}
 		}
 
 		const container = new Container()
-		expect(() => container.resolve(NeedsDep)).toThrow('constructor metadata is missing')
+		expect(() => container.resolve(NeedsDep)).toThrow('not decorated with @Service()')
+	})
+
+	test('resolve() shows metadata error for decorated class with missing reflect-metadata', () => {
+		@Service()
+		class DecoratedButNoMeta {
+			constructor(_dep: unknown) {}
+		}
+		// Clear the paramtypes that TypeScript might have emitted
+		Reflect.deleteMetadata('design:paramtypes', DecoratedButNoMeta)
+
+		const container = new Container()
+		expect(() => container.resolve(DecoratedButNoMeta)).toThrow('constructor metadata is missing')
 	})
 
 	test('resolve() throws clear error for non-class dependency metadata', () => {

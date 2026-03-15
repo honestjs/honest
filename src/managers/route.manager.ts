@@ -73,11 +73,13 @@ export class RouteManager {
 	 * @param path - The path segment to normalize
 	 * @returns The normalized path segment
 	 */
-	private normalizePath(path: unknown): string {
-		if (isString(path)) {
-			return normalizePath(path)
+	private normalizePath(path: string): string {
+		if (!isString(path)) {
+			throw new Error(
+				`Invalid path: expected a string but received ${typeof path}. Check your @Controller() and route decorator arguments.`
+			)
 		}
-		return path ? `/${path}` : ''
+		return normalizePath(path)
 	}
 
 	/**
@@ -339,8 +341,8 @@ export class RouteManager {
 		const wrapperHandler = async (c: Context) => {
 			try {
 				// Store controller class and handler name in context for exception filters
-				c.set('controllerClass', controllerClass)
-				c.set('handlerName', String(handlerName))
+				c.set('__honest_controllerClass', controllerClass)
+				c.set('__honest_handlerName', String(handlerName))
 
 				// Get handler guards
 				const guards = ComponentManager.getHandlerGuards(controllerClass, handlerName)

@@ -2,8 +2,10 @@ import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Application } from './application'
 import { Body, Controller, Get, Module, Post, Service, UseFilters } from './decorators'
+import { Container } from './di/container'
 import { createParamDecorator } from './helpers'
 import type { IFilter, IGuard } from './interfaces'
+import { ComponentManager } from './managers'
 import { RouteRegistry } from './registries/route.registry'
 
 @Controller('/health')
@@ -340,5 +342,47 @@ describe('Application', () => {
 		expect(res.status).toBe(500)
 		const body = await res.json()
 		expect(body.message).toContain('filter exploded')
+	})
+
+	// --- Phase 3 DX improvement tests ---
+
+	test('DI error message tells you to add @Service() when decorator is missing', () => {
+		class NotAService {
+			constructor(public dep: TestController) {}
+		}
+
+		const container = new Container()
+		expect(() => container.resolve(NotAService)).toThrow('not decorated with @Service()')
+	})
+
+	test('container.has() returns false for unresolved and true after resolve', async () => {
+		const container = new Container()
+		expect(container.has(TestController)).toBe(false)
+
+		container.resolve(TestController)
+		expect(container.has(TestController)).toBe(true)
+	})
+
+	test('container.clear() removes all cached instances', () => {
+		const container = new Container()
+		container.resolve(TestController)
+		expect(container.has(TestController)).toBe(true)
+
+		container.clear()
+		expect(container.has(TestController)).toBe(false)
+	})
+
+	test('ComponentManager methods throw before init() is called', () => {
+		// Reset ComponentManager by re-initializing with undefined
+		// We access the static container via casting to test the guard
+		const original = (ComponentManager as any).container
+		;(ComponentManager as any).container = undefined
+
+		expect(() => ComponentManager.resolveMiddleware([])).toThrow('not initialized')
+		expect(() => ComponentManager.resolveGuards([])).toThrow('not initialized')
+		expect(() => ComponentManager.resolvePipes([])).toThrow('not initialized')
+
+		// Restore
+		;(ComponentManager as any).container = original
 	})
 })

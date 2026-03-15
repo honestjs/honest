@@ -1,4 +1,5 @@
 import type { DiContainer } from '../interfaces'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -36,6 +37,11 @@ export class Container implements DiContainer {
 
 		const paramTypes = Reflect.getMetadata('design:paramtypes', target) || []
 		if (target.length > 0 && paramTypes.length === 0) {
+			if (!MetadataRegistry.isService(target)) {
+				throw new Error(
+					`Cannot resolve ${target.name}: it is not decorated with @Service(). Did you forget to add @Service() to the class?`
+				)
+			}
 			throw new Error(
 				`Cannot resolve dependencies for ${target.name}: constructor metadata is missing. Ensure 'reflect-metadata' is imported and 'emitDecoratorMetadata' is enabled.`
 			)
@@ -63,5 +69,13 @@ export class Container implements DiContainer {
 	 */
 	register<T>(target: Constructor<T>, instance: T): void {
 		this.instances.set(target, instance)
+	}
+
+	has<T>(target: Constructor<T>): boolean {
+		return this.instances.has(target)
+	}
+
+	clear(): void {
+		this.instances.clear()
 	}
 }

@@ -23,4 +23,17 @@ export interface DiContainer {
 	 * @throws {Error} If registration fails
 	 */
 	register<T>(target: Constructor<T>, instance: T): void
+
+	/**
+	 * Checks whether the container already holds an instance for the given class
+	 * @param target - The class constructor to check
+	 * @returns true if an instance has been resolved or registered
+	 */
+	has<T>(target: Constructor<T>): boolean
+
+	/**
+	 * Removes all cached instances from the container
+	 * Useful for resetting state between tests
+	 */
+	clear(): void
 }
