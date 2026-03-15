@@ -16,43 +16,30 @@ import { type ComponentType, type ComponentTypeMap, MetadataRegistry } from '../
 import type { Constructor } from '../types'
 import { isObject } from '../utils'
 
+type ComponentInstance = MiddlewareType | GuardType | PipeType | FilterType
+
 /**
- * Manager class for handling all component types in the Honest framework
- * Provides unified management of middleware, guards, pipes, and filters
- * Handles component registration, resolution, and execution at global, controller, and handler levels
- * Works with the dependency injection container to resolve component instances
+ * Manager class for handling all component types in the Honest framework.
+ *
+ * Each Application instance owns a ComponentManager, which holds per-app
+ * global components and a reference to the DI container. Controller-level
+ * and handler-level components remain in MetadataRegistry (static, set at
+ * class-definition time by decorators).
  */
 export class ComponentManager {
-	private static container: DiContainer
+	private readonly globalComponents = new Map<ComponentType, Set<ComponentInstance>>([
+		['middleware', new Set<MiddlewareType>()],
+		['guard', new Set<GuardType>()],
+		['pipe', new Set<PipeType>()],
+		['filter', new Set<FilterType>()]
+	])
+
+	constructor(private readonly container: DiContainer) {}
 
 	/**
-	 * Initializes the ComponentManager with a dependency injection container
-	 * Must be called before using any other ComponentManager methods
-	 * @param container - The dependency injection container to use for resolving components
+	 * Configures global components from application options.
 	 */
-	static init(container: DiContainer): void {
-		this.container = container
-	}
-
-	private static assertInitialized(): void {
-		if (!this.container) {
-			throw new Error(
-				'ComponentManager is not initialized. Ensure Application is created before resolving components.'
-			)
-		}
-	}
-
-	/**
-	 * Configures global components from application options
-	 * Global components are applied to all routes in the application
-	 * @param options - Application options containing component configurations
-	 * @param options.components - Optional component configuration object
-	 * @param options.components.middleware - Optional array of global middleware
-	 * @param options.components.guards - Optional array of global guards
-	 * @param options.components.pipes - Optional array of global pipes
-	 * @param options.components.filters - Optional array of global filters
-	 */
-	static setupGlobalComponents(options: {
+	setupGlobalComponents(options: {
 		components?: {
 			middleware?: MiddlewareType[]
 			guards?: GuardType[]
@@ -79,90 +66,37 @@ export class ComponentManager {
 		}
 	}
 
-	/**
-	 * Registers a component at the global level
-	 * @param type - The type of component to register
-	 * @param components - The component classes or instances to register
-	 */
-	static registerGlobal<T extends ComponentType>(type: T, ...components: ComponentTypeMap[T][]): void {
+	registerGlobal<T extends ComponentType>(type: T, ...components: ComponentTypeMap[T][]): void {
 		components.forEach((component) => {
-			MetadataRegistry.registerGlobal(type, component)
+			this.globalComponents.get(type)!.add(component as unknown as ComponentInstance)
 		})
 	}
 
-	/**
-	 * Registers a component at the controller level
-	 * @param type - The type of component to register
-	 * @param controller - The controller class to register the component for
-	 * @param components - The component classes or instances to register
-	 */
-	static registerController<T extends ComponentType>(
-		type: T,
-		controller: Constructor,
-		...components: ComponentTypeMap[T][]
-	): void {
-		components.forEach((component) => {
-			MetadataRegistry.registerController(type, controller, component)
-		})
+	getGlobal<T extends ComponentType>(type: T): Set<ComponentTypeMap[T]> {
+		return this.globalComponents.get(type) as unknown as Set<ComponentTypeMap[T]>
 	}
 
 	/**
-	 * Registers a component at the handler level
-	 * @param type - The type of component to register
-	 * @param controller - The controller class
-	 * @param handlerName - The handler method name
-	 * @param components - The component classes or instances to register
+	 * Gets all components of a specific type for a handler.
+	 * Merges: instance global → static controller → static handler.
 	 */
-	static registerHandler<T extends ComponentType>(
-		type: T,
-		controller: Constructor,
-		handlerName: string | symbol,
-		...components: ComponentTypeMap[T][]
-	): void {
-		const handlerKey = `${controller.name}:${String(handlerName)}`
-		components.forEach((component) => {
-			MetadataRegistry.registerHandler(type, handlerKey, component)
-		})
-	}
-
-	/**
-	 * Gets all components of a specific type for a handler
-	 * @param type - The type of component to get
-	 * @param controller - The controller class
-	 * @param handlerName - The handler method name
-	 * @returns An array of component instances
-	 */
-	static getComponents<T extends ComponentType>(
+	getComponents<T extends ComponentType>(
 		type: T,
 		controller: Constructor,
 		handlerName: string | symbol
 	): ComponentTypeMap[T][] {
 		const handlerKey = `${controller.name}:${String(handlerName)}`
 
-		// Get handler-level components
 		const handlerComponents = MetadataRegistry.getHandler(type, handlerKey)
-
-		// Get controller-level components
 		const controllerComponents = MetadataRegistry.getController(type, controller)
+		const globalComponents = Array.from(this.globalComponents.get(type) || [])
 
-		// Get global components
-		const globalComponents = Array.from(MetadataRegistry.getGlobal(type))
-
-		// Combine components (global components run first, then controller components, then handler components)
-		return [...globalComponents, ...controllerComponents, ...handlerComponents]
+		return [...globalComponents, ...controllerComponents, ...handlerComponents] as ComponentTypeMap[T][]
 	}
 
-	// Middleware-specific methods
+	// -- Middleware --
 
-	/**
-	 * Resolves middleware classes or instances to middleware functions
-	 * @param middlewareItems - The middleware classes or instances to resolve
-	 * @returns An array of middleware functions
-	 */
-	static resolveMiddleware(
-		middlewareItems: MiddlewareType[]
-	): ((c: Context, next: Next) => Promise<Response | void>)[] {
-		this.assertInitialized()
+	resolveMiddleware(middlewareItems: MiddlewareType[]): ((c: Context, next: Next) => Promise<Response | void>)[] {
 		return middlewareItems.map((middlewareItem) => {
 			if (isObject(middlewareItem) && 'use' in middlewareItem) {
 				return (middlewareItem as IMiddleware).use.bind(middlewareItem)
@@ -173,13 +107,7 @@ export class ComponentManager {
 		})
 	}
 
-	/**
-	 * Gets middleware for a specific handler
-	 * @param controller - The controller class
-	 * @param handlerName - The handler method name
-	 * @returns An array of middleware functions
-	 */
-	static getHandlerMiddleware(
+	getHandlerMiddleware(
 		controller: Constructor,
 		handlerName: string | symbol
 	): ((c: Context, next: Next) => Promise<Response | void>)[] {
@@ -187,24 +115,14 @@ export class ComponentManager {
 		return this.resolveMiddleware(middlewareItems as MiddlewareType[])
 	}
 
-	/**
-	 * Gets global middleware
-	 * @returns An array of middleware functions
-	 */
-	static getGlobalMiddleware(): ((c: Context, next: Next) => Promise<Response | void>)[] {
-		const globalMiddleware = Array.from(MetadataRegistry.getGlobal('middleware'))
+	getGlobalMiddleware(): ((c: Context, next: Next) => Promise<Response | void>)[] {
+		const globalMiddleware = Array.from(this.globalComponents.get('middleware') || [])
 		return this.resolveMiddleware(globalMiddleware as MiddlewareType[])
 	}
 
-	// Guard-specific methods
+	// -- Guards --
 
-	/**
-	 * Resolves guard classes or instances to guard instances
-	 * @param guardItems - The guard classes or instances to resolve
-	 * @returns An array of guard instances
-	 */
-	static resolveGuards(guardItems: GuardType[]): IGuard[] {
-		this.assertInitialized()
+	resolveGuards(guardItems: GuardType[]): IGuard[] {
 		return guardItems.map((guardItem) => {
 			if (isObject(guardItem) && 'canActivate' in guardItem) {
 				return guardItem as IGuard
@@ -214,26 +132,14 @@ export class ComponentManager {
 		})
 	}
 
-	/**
-	 * Gets guards for a specific handler
-	 * @param controller - The controller class
-	 * @param handlerName - The handler method name
-	 * @returns An array of guard instances
-	 */
-	static getHandlerGuards(controller: Constructor, handlerName: string | symbol): IGuard[] {
+	getHandlerGuards(controller: Constructor, handlerName: string | symbol): IGuard[] {
 		const guardItems = this.getComponents('guard', controller, handlerName)
 		return this.resolveGuards(guardItems as GuardType[])
 	}
 
-	// Pipe-specific methods
+	// -- Pipes --
 
-	/**
-	 * Resolves pipe classes or instances to pipe instances
-	 * @param pipeItems - The pipe classes or instances to resolve
-	 * @returns An array of pipe instances
-	 */
-	static resolvePipes(pipeItems: PipeType[]): IPipe[] {
-		this.assertInitialized()
+	resolvePipes(pipeItems: PipeType[]): IPipe[] {
 		return pipeItems.map((pipeItem) => {
 			if (isObject(pipeItem) && 'transform' in pipeItem) {
 				return pipeItem as IPipe
@@ -243,27 +149,12 @@ export class ComponentManager {
 		})
 	}
 
-	/**
-	 * Gets pipes for a specific handler
-	 * @param controller - The controller class
-	 * @param handlerName - The handler method name
-	 * @returns An array of pipe instances
-	 */
-	static getHandlerPipes(controller: Constructor, handlerName: string | symbol): IPipe[] {
+	getHandlerPipes(controller: Constructor, handlerName: string | symbol): IPipe[] {
 		const pipeItems = this.getComponents('pipe', controller, handlerName)
 		return this.resolvePipes(pipeItems as PipeType[])
 	}
 
-	/**
-	 * Executes a series of pipes on a value
-	 * Pipes are executed in sequence, with each pipe's output feeding into the next pipe
-	 * @param value - The initial value to transform
-	 * @param metadata - Metadata about the parameter being transformed
-	 * @param pipes - Array of pipes to execute
-	 * @returns The final transformed value after all pipes have executed
-	 * @throws {Error} If any pipe transformation fails
-	 */
-	static async executePipes(value: any, metadata: ArgumentMetadata, pipes: IPipe[]): Promise<any> {
+	async executePipes(value: any, metadata: ArgumentMetadata, pipes: IPipe[]): Promise<any> {
 		let transformedValue = value
 
 		for (const pipe of pipes) {
@@ -273,21 +164,12 @@ export class ComponentManager {
 		return transformedValue
 	}
 
-	// Filter-specific methods
+	// -- Filters --
 
-	/**
-	 * Handles an exception by passing it through registered exception filters
-	 * Filters are executed in sequence until one returns a response
-	 * @param exception - The error to handle
-	 * @param context - The Hono context object
-	 * @returns A Response object if a filter handles the exception, undefined otherwise
-	 */
-	static async handleException(exception: Error, context: Context): Promise<Response | undefined> {
-		// Get controller from context
+	async handleException(exception: Error, context: Context): Promise<Response | undefined> {
 		const controller = context.get('__honest_controllerClass') as Constructor | undefined
 		const handlerName = context.get('__honest_handlerName') as string | undefined
 
-		// 1. Try handler-level filters first if we have the handler information
 		if (controller && handlerName) {
 			const handlerFilters = MetadataRegistry.getHandler('filter', `${controller.name}:${handlerName}`)
 			if (handlerFilters.length > 0) {
@@ -296,7 +178,6 @@ export class ComponentManager {
 			}
 		}
 
-		// 2. Try controller-specific filters next
 		if (controller) {
 			const controllerFilters = MetadataRegistry.getController('filter', controller)
 			if (controllerFilters.length > 0) {
@@ -305,8 +186,7 @@ export class ComponentManager {
 			}
 		}
 
-		// 3. Try global filters
-		const globalFilters = Array.from(MetadataRegistry.getGlobal('filter'))
+		const globalFilters = Array.from(this.globalComponents.get('filter') || [])
 		if (globalFilters.length > 0) {
 			const response = await this.executeFilters(globalFilters as FilterType[], exception, context)
 			if (response) return response
@@ -316,19 +196,11 @@ export class ComponentManager {
 		return context.json(response, status)
 	}
 
-	/**
-	 * Executes a list of exception filters
-	 * @param filterItems - The exception filter classes or instances to execute
-	 * @param exception - The exception that was thrown
-	 * @param context - The Hono context object
-	 * @returns The response from the first filter that handles the exception or undefined if no filter handled it
-	 */
-	private static async executeFilters(
+	private async executeFilters(
 		filterItems: FilterType[],
 		exception: Error,
 		context: Context
 	): Promise<Response | undefined> {
-		this.assertInitialized()
 		for (const filterItem of filterItems) {
 			let filter: IFilter
 
@@ -354,20 +226,9 @@ export class ComponentManager {
 		return undefined
 	}
 
-	/**
-	 * Registers a module and its dependencies with the container.
-	 * Tracks already-registered modules to prevent duplicate processing
-	 * in diamond dependency graphs (e.g. A imports B and C, both import D).
-	 * @param moduleClass - The module class to register
-	 * @param container - The dependency injection container
-	 * @param registered - Set of modules already processed in this registration pass
-	 * @returns An array of controller classes registered from this module
-	 */
-	static async registerModule(
-		moduleClass: Constructor,
-		container: DiContainer,
-		registered = new Set<Constructor>()
-	): Promise<Constructor[]> {
+	// -- Module registration --
+
+	async registerModule(moduleClass: Constructor, registered = new Set<Constructor>()): Promise<Constructor[]> {
 		if (registered.has(moduleClass)) {
 			return []
 		}
@@ -381,22 +242,19 @@ export class ComponentManager {
 
 		const controllers: Constructor[] = []
 
-		// Register imported modules recursively
 		if (moduleOptions.imports && moduleOptions.imports.length > 0) {
 			for (const importedModule of moduleOptions.imports) {
-				const importedControllers = await this.registerModule(importedModule, container, registered)
+				const importedControllers = await this.registerModule(importedModule, registered)
 				controllers.push(...importedControllers)
 			}
 		}
 
-		// Register services
 		if (moduleOptions.services && moduleOptions.services.length > 0) {
 			for (const serviceClass of moduleOptions.services) {
-				container.resolve(serviceClass)
+				this.container.resolve(serviceClass)
 			}
 		}
 
-		// Add controllers from this module
 		if (moduleOptions.controllers && moduleOptions.controllers.length > 0) {
 			controllers.push(...moduleOptions.controllers)
 		}

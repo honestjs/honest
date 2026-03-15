@@ -1,5 +1,5 @@
 import type { PipeType } from '../interfaces'
-import { ComponentManager } from '../managers'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -11,12 +11,11 @@ import type { Constructor } from '../types'
 export function UsePipes(...pipes: PipeType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
-			// Method decorator - handler-level pipes
 			const controllerClass = target.constructor as Constructor
-			ComponentManager.registerHandler('pipe', controllerClass, propertyKey, ...pipes)
+			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
+			pipes.forEach((pipe) => MetadataRegistry.registerHandler('pipe', handlerKey, pipe))
 		} else {
-			// Class decorator - controller-level pipes
-			ComponentManager.registerController('pipe', target as Constructor, ...pipes)
+			pipes.forEach((pipe) => MetadataRegistry.registerController('pipe', target as Constructor, pipe))
 		}
 	}
 }

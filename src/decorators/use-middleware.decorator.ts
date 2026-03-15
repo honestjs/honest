@@ -1,5 +1,5 @@
 import type { MiddlewareType } from '../interfaces'
-import { ComponentManager } from '../managers'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -11,12 +11,11 @@ import type { Constructor } from '../types'
 export function UseMiddleware(...middleware: MiddlewareType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
-			// Method decorator - handler-level middleware
 			const controllerClass = target.constructor as Constructor
-			ComponentManager.registerHandler('middleware', controllerClass, propertyKey, ...middleware)
+			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
+			middleware.forEach((mw) => MetadataRegistry.registerHandler('middleware', handlerKey, mw))
 		} else {
-			// Class decorator - controller-level middleware
-			ComponentManager.registerController('middleware', target as Constructor, ...middleware)
+			middleware.forEach((mw) => MetadataRegistry.registerController('middleware', target as Constructor, mw))
 		}
 	}
 }

@@ -1,5 +1,5 @@
 import type { GuardType } from '../interfaces'
-import { ComponentManager } from '../managers'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -11,12 +11,11 @@ import type { Constructor } from '../types'
 export function UseGuards(...guards: GuardType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
-			// Method decorator - handler-level guards
 			const controllerClass = target.constructor as Constructor
-			ComponentManager.registerHandler('guard', controllerClass, propertyKey, ...guards)
+			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
+			guards.forEach((guard) => MetadataRegistry.registerHandler('guard', handlerKey, guard))
 		} else {
-			// Class decorator - controller-level guards
-			ComponentManager.registerController('guard', target as Constructor, ...guards)
+			guards.forEach((guard) => MetadataRegistry.registerController('guard', target as Constructor, guard))
 		}
 	}
 }

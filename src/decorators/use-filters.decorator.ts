@@ -1,5 +1,5 @@
 import type { FilterType } from '../interfaces'
-import { ComponentManager } from '../managers'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -10,12 +10,11 @@ import type { Constructor } from '../types'
 export function UseFilters(...filters: FilterType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
-			// Method decorator - handler-level exception filters
 			const controllerClass = target.constructor as Constructor
-			ComponentManager.registerHandler('filter', controllerClass, propertyKey, ...filters)
+			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
+			filters.forEach((filter) => MetadataRegistry.registerHandler('filter', handlerKey, filter))
 		} else {
-			// Class decorator - controller-level exception filters
-			ComponentManager.registerController('filter', target as Constructor, ...filters)
+			filters.forEach((filter) => MetadataRegistry.registerController('filter', target as Constructor, filter))
 		}
 	}
 }

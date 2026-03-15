@@ -10,22 +10,10 @@ import type {
 } from '../interfaces'
 import type { Constructor } from '../types'
 
-/**
- * Available component types that can be registered at different levels in the application
- * Each type corresponds to a specific aspect of request processing
- */
 export type ComponentType = 'middleware' | 'guard' | 'pipe' | 'filter'
 
-/**
- * Union type of all possible component instances
- * Represents any type of component that can be registered in the application
- */
 export type ComponentInstance = MiddlewareType | GuardType | PipeType | FilterType
 
-/**
- * Maps component type identifiers to their specific instance types
- * Used for type-safe component registration and retrieval
- */
 export interface ComponentTypeMap {
 	middleware: MiddlewareType
 	guard: GuardType
@@ -83,17 +71,6 @@ export class MetadataRegistry {
 	 * Used for optimizing context injection
 	 */
 	private static readonly contextIndices = new Map<Constructor, Map<string | symbol, number>>()
-
-	/**
-	 * Registry for global-level components
-	 * Components registered here apply to all routes
-	 */
-	private static readonly global = new Map<ComponentType, Set<ComponentInstance>>([
-		['middleware', new Set<MiddlewareType>()],
-		['guard', new Set<GuardType>()],
-		['pipe', new Set<PipeType>()],
-		['filter', new Set<FilterType>()]
-	])
 
 	/**
 	 * Registry for controller-level components
@@ -242,20 +219,6 @@ export class MetadataRegistry {
 	}
 
 	/**
-	 * Register a component at the global level
-	 */
-	static registerGlobal<T extends ComponentType>(type: T, component: ComponentTypeMap[T]): void {
-		this.global.get(type)!.add(component as unknown as ComponentInstance)
-	}
-
-	/**
-	 * Get all global components of a specific type
-	 */
-	static getGlobal<T extends ComponentType>(type: T): Set<ComponentTypeMap[T]> {
-		return this.global.get(type) as unknown as Set<ComponentTypeMap[T]>
-	}
-
-	/**
 	 * Register a component at the controller level
 	 */
 	static registerController<T extends ComponentType>(
@@ -298,22 +261,8 @@ export class MetadataRegistry {
 	}
 
 	/**
-	 * Clears global-level components only (middleware, guards, pipes, filters).
-	 * Called per Application instance to prevent global components from one app
-	 * leaking into the next. Does NOT clear decorator metadata (routes,
-	 * controllers, services, modules, parameters, context indices) since those
-	 * are set at class-definition time and shared across all apps.
-	 */
-	static clearGlobalComponents(): void {
-		for (const set of this.global.values()) {
-			set.clear()
-		}
-	}
-
-	/**
-	 * Clears all registered metadata from the registry
-	 * Primarily used for testing and development purposes
-	 * Use with caution in production environments
+	 * Clears all registered decorator metadata.
+	 * Primarily used for testing.
 	 */
 	static clear(): void {
 		this.routes.clear()
@@ -324,15 +273,10 @@ export class MetadataRegistry {
 		this.parameters.clear()
 		this.contextIndices.clear()
 
-		// Clear global components
-		this.clearGlobalComponents()
-
-		// Clear controller-level components
 		for (const map of this.controller.values()) {
 			map.clear()
 		}
 
-		// Clear handler-level components
 		for (const map of this.handler.values()) {
 			map.clear()
 		}

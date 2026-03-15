@@ -1,12 +1,10 @@
 import 'reflect-metadata'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Application } from './application'
 import { Body, Controller, Get, Module, Post, Service, UseFilters } from './decorators'
 import { Container } from './di/container'
 import { createParamDecorator } from './helpers'
 import type { IFilter, IGuard } from './interfaces'
-import { ComponentManager } from './managers'
-import { RouteRegistry } from './registries/route.registry'
 
 @Controller('/health')
 class TestController {
@@ -111,10 +109,6 @@ class UnsafeParamController {
 class UnsafeParamModule {}
 
 describe('Application', () => {
-	afterEach(() => {
-		RouteRegistry.clear()
-	})
-
 	test('create() registers module and getRoutes() returns expected route', async () => {
 		const { app, hono } = await Application.create(TestModule)
 
@@ -211,7 +205,7 @@ describe('Application', () => {
 		expect(await res.text()).toBe('raw-ok')
 	})
 
-	test('creating a new app resets RouteRegistry route list', async () => {
+	test('each app has isolated routes (no leaking between apps)', async () => {
 		const { app: appA } = await Application.create(OnlyAModule)
 		expect(appA.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(true)
 
@@ -253,14 +247,12 @@ describe('Application', () => {
 			}
 		}
 
-		// First app: register a global guard that rejects everything
 		await Application.create(OnlyAModule, {
 			components: { guards: [LeakyGuard] }
 		})
 
 		guardCalled = false
 
-		// Second app: no global guard — the guard from the first app must NOT leak
 		const { hono } = await Application.create(OnlyBModule)
 		const res = await hono.request(new Request('http://localhost/only-b'))
 
@@ -310,7 +302,6 @@ describe('Application', () => {
 		@Module({ imports: [BranchAModule, BranchBModule] })
 		class DiamondRootModule {}
 
-		// Should not throw "Duplicate route detected" for /shared
 		const { app } = await Application.create(DiamondRootModule)
 		const routes = app.getRoutes()
 		const sharedRoutes = routes.filter((r) => r.fullPath.includes('/shared'))
@@ -372,17 +363,85 @@ describe('Application', () => {
 		expect(container.has(TestController)).toBe(false)
 	})
 
-	test('ComponentManager methods throw before init() is called', () => {
-		// Reset ComponentManager by re-initializing with undefined
-		// We access the static container via casting to test the guard
-		const original = (ComponentManager as any).container
-		;(ComponentManager as any).container = undefined
+	// --- Phase 4 architecture tests ---
 
-		expect(() => ComponentManager.resolveMiddleware([])).toThrow('not initialized')
-		expect(() => ComponentManager.resolveGuards([])).toThrow('not initialized')
-		expect(() => ComponentManager.resolvePipes([])).toThrow('not initialized')
+	test('two apps created in sequence have fully isolated routes', async () => {
+		const { app: appA, hono: honoA } = await Application.create(OnlyAModule)
+		const { app: appB, hono: honoB } = await Application.create(OnlyBModule)
 
-		// Restore
-		;(ComponentManager as any).container = original
+		expect(appA.getRoutes().length).toBe(1)
+		expect(appB.getRoutes().length).toBe(1)
+		expect(appA.getRoutes()[0].fullPath).toContain('/only-a')
+		expect(appB.getRoutes()[0].fullPath).toContain('/only-b')
+
+		const resA = await honoA.request(new Request('http://localhost/only-a'))
+		expect(resA.status).toBe(200)
+		expect(await resA.json()).toEqual({ app: 'a' })
+
+		const resB = await honoB.request(new Request('http://localhost/only-b'))
+		expect(resB.status).toBe(200)
+		expect(await resB.json()).toEqual({ app: 'b' })
+	})
+
+	test('global filters are isolated between apps', async () => {
+		let filterHitCount = 0
+		const CountingFilter: IFilter = {
+			catch(exception: any, context: any): Response {
+				filterHitCount++
+				return context.json({ filtered: true }, 500)
+			}
+		}
+
+		@Controller('/err')
+		class ErrController {
+			@Get()
+			index() {
+				throw new Error('boom')
+			}
+		}
+
+		@Module({ controllers: [ErrController] })
+		class ErrModule {}
+
+		const { hono: hono1 } = await Application.create(ErrModule, {
+			components: { filters: [CountingFilter] }
+		})
+		await hono1.request(new Request('http://localhost/err'))
+		expect(filterHitCount).toBe(1)
+
+		filterHitCount = 0
+		const { hono: hono2 } = await Application.create(ErrModule)
+		const res = await hono2.request(new Request('http://localhost/err'))
+		expect(filterHitCount).toBe(0)
+		expect(res.status).toBe(500)
+	})
+
+	test('DI containers are isolated between apps', async () => {
+		@Service()
+		class CounterService {
+			count = 0
+		}
+
+		@Controller('/counter')
+		class CounterController {
+			constructor(private svc: CounterService) {}
+			@Get()
+			index() {
+				this.svc.count++
+				return { count: this.svc.count }
+			}
+		}
+
+		@Module({ controllers: [CounterController], services: [CounterService] })
+		class CounterModule {}
+
+		const { hono: hono1 } = await Application.create(CounterModule)
+		await hono1.request(new Request('http://localhost/counter'))
+		const res1 = await hono1.request(new Request('http://localhost/counter'))
+		expect((await res1.json()).count).toBe(2)
+
+		const { hono: hono2 } = await Application.create(CounterModule)
+		const res2 = await hono2.request(new Request('http://localhost/counter'))
+		expect((await res2.json()).count).toBe(1)
 	})
 })

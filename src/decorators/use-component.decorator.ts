@@ -1,5 +1,5 @@
-import { ComponentManager } from '../managers'
 import type { ComponentType, ComponentTypeMap } from '../registries'
+import { MetadataRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
@@ -12,12 +12,13 @@ import type { Constructor } from '../types'
 export function UseComponent<T extends ComponentType>(type: T, ...components: ComponentTypeMap[T][]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
-			// Method decorator - handler-level components
 			const controllerClass = target.constructor as Constructor
-			ComponentManager.registerHandler(type, controllerClass, propertyKey, ...components)
+			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
+			components.forEach((component) => MetadataRegistry.registerHandler(type, handlerKey, component))
 		} else {
-			// Class decorator - controller-level components
-			ComponentManager.registerController(type, target as Constructor, ...components)
+			components.forEach((component) =>
+				MetadataRegistry.registerController(type, target as Constructor, component)
+			)
 		}
 	}
 }
