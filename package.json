@@ -1,7 +1,7 @@
 {
 	"name": "honestjs",
 	"description": "HonestJS - a modern web framework built on top of Hono",
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"author": "Orkhan Karimov <karimovok1@gmail.com> (https://github.com/kerimovok)",
 	"repository": {
 		"type": "git",
@@ -23,7 +23,7 @@
 		"typescript-eslint": "^8.57.0"
 	},
 	"peerDependencies": {
-		"hono": "^4.8.5",
+		"hono": "^4.8.4",
 		"typescript": "^5.8.3",
 		"reflect-metadata": "^0.2.2"
 	},
