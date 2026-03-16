@@ -113,13 +113,13 @@ describe('ComponentManager', () => {
 			const cm = new ComponentManager(container)
 			@Service()
 			class TestGuard implements IGuard {
-				canActivate() {
+				canActivate(_context: any) {
 					return true
 				}
 			}
 			const resolved = cm.resolveGuards([TestGuard])
 			expect(resolved).toHaveLength(1)
-			expect(resolved[0].canActivate()).toBe(true)
+			expect(resolved[0].canActivate({} as any)).toBe(true)
 		})
 	})
 
