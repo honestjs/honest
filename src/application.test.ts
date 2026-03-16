@@ -251,6 +251,7 @@ describe('Application', () => {
 			components: { guards: [LeakyGuard] }
 		})
 
+		expect(guardCalled).toBe(false)
 		guardCalled = false
 
 		const { hono } = await Application.create(OnlyBModule)

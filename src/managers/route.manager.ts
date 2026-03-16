@@ -63,9 +63,9 @@ export class RouteManager {
 		wrapperHandler: (c: Context) => Promise<any>
 	): void {
 		if (handlerMiddleware.length > 0) {
-			this.hono.on(method.toUpperCase(), path, ...handlerMiddleware, wrapperHandler)
+			this.hono.on(method.toUpperCase(), [path], ...handlerMiddleware, wrapperHandler)
 		} else {
-			this.hono.on(method.toUpperCase(), path, wrapperHandler)
+			this.hono.on(method.toUpperCase(), [path], wrapperHandler)
 		}
 	}
 
