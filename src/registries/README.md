@@ -20,7 +20,8 @@ The main metadata registry that stores all decorator and component information:
 - **Service registration** - Tracks registered services for dependency injection
 - **Module configuration** - Stores module options and dependencies
 - **Parameter metadata** - Tracks parameter decorators and their configurations
-- **Component registrations** - Manages controller-level and handler-level components (global components are managed by ComponentManager per application)
+- **Component registrations** - Manages controller-level and handler-level components (global components are managed by
+  ComponentManager per application)
 - **Type definitions** - Defines ComponentType, ComponentInstance, and ComponentTypeMap
 
 ### `route.registry.ts`
@@ -102,7 +103,9 @@ Manages component registrations at different levels:
 
 #### Global Components
 
-Global components are configured via `Application.create(Module, { components: { ... } })` or on the `ComponentManager` instance (e.g. `componentManager.registerGlobal('middleware', LoggerMiddleware)`). They are not stored in MetadataRegistry.
+Global components are configured via `Application.create(Module, { components: { ... } })` or on the `ComponentManager`
+instance (e.g. `componentManager.registerGlobal('middleware', LoggerMiddleware)`). They are not stored in
+MetadataRegistry.
 
 #### Controller Components
 
@@ -161,7 +164,8 @@ const options = MetadataRegistry.getModuleOptions(AppModule)
 
 ## Route Registry Features
 
-`RouteRegistry` is **instance-based**: each `Application` has its own registry. Use `app.getRoutes()` to get the list of routes; the registry’s methods (`getRoutes()`, `getRoutesByController()`, etc.) are instance methods on that registry.
+`RouteRegistry` is **instance-based**: each `Application` has its own registry. Use `app.getRoutes()` to get the list of
+routes; the registry’s methods (`getRoutes()`, `getRoutesByController()`, etc.) are instance methods on that registry.
 
 ### Route Information Storage
 

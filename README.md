@@ -74,7 +74,8 @@ cd my-project
 bun dev
 ```
 
-This creates a new project with a standard structure and config. Use the [website](https://github.com/honestjs/website) for full docs.
+This creates a new project with a standard structure and config. Use the [website](https://github.com/honestjs/website)
+for full docs.
 
 ## Features
 
@@ -124,7 +125,8 @@ const { app, hono } = await Application.create(AppModule, {
 export default hono
 ```
 
-Controllers, services, and modules are wired by decorators; use **guards** for auth, **pipes** for validation, and **filters** for error handling. See the [documentation](https://github.com/honestjs/website) for details.
+Controllers, services, and modules are wired by decorators; use **guards** for auth, **pipes** for validation, and
+**filters** for error handling. See the [documentation](https://github.com/honestjs/website) for details.
 
 ## License
 
