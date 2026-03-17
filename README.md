@@ -92,7 +92,12 @@ for full docs.
 
 ```typescript
 import 'reflect-metadata'
-import { Application, Controller, Get, Module, Service, UseGuards } from 'honestjs'
+import { Application, Controller, Get, Module, Service } from 'honestjs'
+import { LoggerMiddleware } from '@honestjs/middleware'
+import { AuthGuard } from '@honestjs/guards'
+import { ValidationPipe } from '@honestjs/pipes'
+import { HttpExceptionFilter } from '@honestjs/filters'
+import { ApiDocsPlugin } from '@honestjs/api-docs-plugin'
 
 @Service()
 class AppService {
@@ -106,8 +111,6 @@ class AppController {
 	constructor(private readonly appService: AppService) {}
 
 	@Get()
-	// @UseGuards(AuthGuard)
-	// @UsePipes(ValidationPipe)
 	hello() {
 		return this.appService.hello()
 	}
@@ -120,8 +123,30 @@ class AppController {
 class AppModule {}
 
 const { app, hono } = await Application.create(AppModule, {
-	routing: { prefix: 'api', version: 1 }
+	debug: { routes: true, plugins: true },
+	strict: { requireRoutes: true },
+	deprecations: { printPreV1Warning: true },
+	container: myContainer,
+	hono: {
+		strict: true,
+		router: customRouter
+	},
+	routing: {
+		prefix: 'api',
+		version: 1
+	},
+	// Components: use class (e.g. AuthGuard) or instance (e.g. new LoggerMiddleware()) to pass options
+	components: {
+		middleware: [new LoggerMiddleware()],
+		guards: [AuthGuard],
+		pipes: [ValidationPipe],
+		filters: [HttpExceptionFilter]
+	},
+	plugins: [new RPCPlugin(), new ApiDocsPlugin(), { plugin: MyPlugin, preProcessors: [pre], postProcessors: [post] }],
+	onError: (err, c) => c.json({ error: err.message }, 500),
+	notFound: (c) => c.json({ error: 'Not found' }, 404)
 })
+
 export default hono
 ```
 
