@@ -1,13 +1,12 @@
 # Interfaces
 
-This directory contains TypeScript interfaces and type definitions that define
-the contracts and data structures used throughout the Honest framework.
+This directory contains TypeScript interfaces and type definitions that define the contracts and data structures used
+throughout the Honest framework.
 
 ## Overview
 
-Interfaces provide type safety and define the structure of objects, classes, and
-functions used in the framework. They ensure consistency across components and
-provide clear contracts for framework extensions.
+Interfaces provide type safety and define the structure of objects, classes, and functions used in the framework. They
+ensure consistency across components and provide clear contracts for framework extensions.
 
 ## Core Interfaces
 
@@ -19,25 +18,25 @@ Main configuration interface for the Honest application:
 
 ```typescript
 interface HonestOptions {
-	container?: DiContainer;
+	container?: DiContainer
 	hono?: {
-		strict?: boolean;
-		router?: any;
-		getPath?: (request: Request, options?: any) => string;
-	};
+		strict?: boolean
+		router?: any
+		getPath?: (request: Request, options?: any) => string
+	}
 	routing?: {
-		prefix?: string;
-		version?: number | typeof VERSION_NEUTRAL | number[];
-	};
+		prefix?: string
+		version?: number | typeof VERSION_NEUTRAL | number[]
+	}
 	components?: {
-		middleware?: MiddlewareType[];
-		guards?: GuardType[];
-		pipes?: PipeType[];
-		filters?: FilterType[];
-	};
-	plugins?: PluginType[];
-	onError?: (error: Error, context: Context) => Response | Promise<Response>;
-	notFound?: (context: Context) => Response | Promise<Response>;
+		middleware?: MiddlewareType[]
+		guards?: GuardType[]
+		pipes?: PipeType[]
+		filters?: FilterType[]
+	}
+	plugins?: PluginType[]
+	onError?: (error: Error, context: Context) => Response | Promise<Response>
+	notFound?: (context: Context) => Response | Promise<Response>
 }
 ```
 
@@ -47,8 +46,8 @@ Configuration options for controllers:
 
 ```typescript
 interface ControllerOptions {
-	prefix?: string | null;
-	version?: number | null | typeof VERSION_NEUTRAL | number[];
+	prefix?: string | null
+	version?: number | null | typeof VERSION_NEUTRAL | number[]
 }
 ```
 
@@ -58,9 +57,9 @@ Configuration options for modules:
 
 ```typescript
 interface ModuleOptions {
-	controllers?: Constructor[];
-	services?: Constructor[];
-	imports?: Constructor[];
+	controllers?: Constructor[]
+	services?: Constructor[]
+	imports?: Constructor[]
 }
 ```
 
@@ -68,23 +67,21 @@ interface ModuleOptions {
 
 #### `IApplicationContext`
 
-App-level registry for publishing and reading pipeline data by key. Available
-via `app.getContext()`. Not the same as Hono’s per-request context (`@Ctx()`):
-this one is app-scoped and lives for the application lifetime. Use for shared
+App-level registry for publishing and reading pipeline data by key. Available via `app.getContext()`. Not the same as
+Hono’s per-request context (`@Ctx()`): this one is app-scoped and lives for the application lifetime. Use for shared
 config, artifacts, or any data that outlives a single request.
 
 ```typescript
 interface IApplicationContext {
-	get<T>(key: string): T | undefined;
-	set<T>(key: string, value: T): void;
-	has(key: string): boolean;
-	delete(key: string): boolean;
-	keys(): IterableIterator<string>;
+	get<T>(key: string): T | undefined
+	set<T>(key: string, value: T): void
+	has(key: string): boolean
+	delete(key: string): boolean
+	keys(): IterableIterator<string>
 }
 ```
 
-Use namespaced keys (e.g. `app.config`, `openapi.spec`) and document key
-contracts in your app.
+Use namespaced keys (e.g. `app.config`, `openapi.spec`) and document key contracts in your app.
 
 ### Dependency Injection
 
@@ -94,8 +91,8 @@ Interface for dependency injection containers:
 
 ```typescript
 interface DiContainer {
-	resolve<T>(target: Constructor<T>): T;
-	register<T>(target: Constructor<T>, instance: T): void;
+	resolve<T>(target: Constructor<T>): T
+	register<T>(target: Constructor<T>, instance: T): void
 }
 ```
 
@@ -107,7 +104,7 @@ Interface for middleware components:
 
 ```typescript
 interface IMiddleware {
-	use(c: Context, next: Next): Promise<Response | void>;
+	use(c: Context, next: Next): Promise<Response | void>
 }
 ```
 
@@ -117,7 +114,7 @@ Interface for guard components:
 
 ```typescript
 interface IGuard {
-	canActivate(context: Context): boolean | Promise<boolean>;
+	canActivate(context: Context): boolean | Promise<boolean>
 }
 ```
 
@@ -127,10 +124,7 @@ Interface for transformation pipes:
 
 ```typescript
 interface IPipe {
-	transform(
-		value: unknown,
-		metadata: ArgumentMetadata,
-	): Promise<unknown> | unknown;
+	transform(value: unknown, metadata: ArgumentMetadata): Promise<unknown> | unknown
 }
 ```
 
@@ -140,10 +134,7 @@ Interface for exception filters:
 
 ```typescript
 interface IFilter {
-	catch(
-		exception: Error,
-		context: Context,
-	): Promise<Response | undefined> | Response | undefined;
+	catch(exception: Error, context: Context): Promise<Response | undefined> | Response | undefined
 }
 ```
 
@@ -155,45 +146,33 @@ Interface for framework plugins:
 
 ```typescript
 interface IPlugin {
-	beforeModulesRegistered?: (
-		app: Application,
-		hono: Hono,
-	) => void | Promise<void>;
-	afterModulesRegistered?: (
-		app: Application,
-		hono: Hono,
-	) => void | Promise<void>;
+	beforeModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
+	afterModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 }
 ```
 
 #### `PluginProcessor`
 
-Processor callback for plugin pre/post hooks. Receives `(app, hono, ctx)` where
-`ctx` is the application context (registry). Use `ctx.get` / `ctx.set` to share
-pipeline data.
+Processor callback for plugin pre/post hooks. Receives `(app, hono, ctx)` where `ctx` is the application context
+(registry). Use `ctx.get` / `ctx.set` to share pipeline data.
 
 ```typescript
-type PluginProcessor = (
-	app: Application,
-	hono: Hono,
-	ctx: IApplicationContext,
-) => void | Promise<void>;
+type PluginProcessor = (app: Application, hono: Hono, ctx: IApplicationContext) => void | Promise<void>
 ```
 
 #### `PluginEntryObject` and `PluginEntry`
 
-Wrap a plugin with optional `preProcessors` (run before lifecycle hooks) and
-`postProcessors` (run after). Plain `IPlugin` or `Constructor<IPlugin>` remain
-valid; they are the simple form of `PluginEntry`.
+Wrap a plugin with optional `preProcessors` (run before lifecycle hooks) and `postProcessors` (run after). Plain
+`IPlugin` or `Constructor<IPlugin>` remain valid; they are the simple form of `PluginEntry`.
 
 ```typescript
 interface PluginEntryObject {
-	plugin: IPlugin | Constructor<IPlugin>;
-	preProcessors?: PluginProcessor[];
-	postProcessors?: PluginProcessor[];
+	plugin: IPlugin | Constructor<IPlugin>
+	preProcessors?: PluginProcessor[]
+	postProcessors?: PluginProcessor[]
 }
 
-type PluginEntry = PluginType | PluginEntryObject;
+type PluginEntry = PluginType | PluginEntryObject
 ```
 
 ### Routing
@@ -204,11 +183,11 @@ Internal metadata for route definitions:
 
 ```typescript
 interface RouteDefinition {
-	path: string;
-	method: string;
-	handlerName: string | symbol;
-	version?: number | null | typeof VERSION_NEUTRAL | number[];
-	prefix?: string | null;
+	path: string
+	method: string
+	handlerName: string | symbol
+	version?: number | null | typeof VERSION_NEUTRAL | number[]
+	prefix?: string | null
 }
 ```
 
@@ -218,15 +197,15 @@ Public route information:
 
 ```typescript
 interface RouteInfo {
-	controller: string | symbol;
-	handler: string | symbol;
-	method: string;
-	prefix: string;
-	version?: string;
-	route: string;
-	path: string;
-	fullPath: string;
-	parameters: ParameterMetadata[];
+	controller: string | symbol
+	handler: string | symbol
+	method: string
+	prefix: string
+	version?: string
+	route: string
+	path: string
+	fullPath: string
+	parameters: ParameterMetadata[]
 }
 ```
 
@@ -238,11 +217,11 @@ Metadata for route parameters:
 
 ```typescript
 interface ParameterMetadata {
-	index: number;
-	name: string;
-	data?: any;
-	factory: (data: any, ctx: Context) => any;
-	metatype?: Constructor<unknown>;
+	index: number
+	name: string
+	data?: any
+	factory: (data: any, ctx: Context) => any
+	metatype?: Constructor<unknown>
 }
 ```
 
@@ -252,9 +231,9 @@ Metadata for pipe transformations:
 
 ```typescript
 interface ArgumentMetadata {
-	type: "body" | "query" | "param" | "custom";
-	metatype?: Constructor<unknown>;
-	data?: string;
+	type: 'body' | 'query' | 'param' | 'custom'
+	metatype?: Constructor<unknown>
+	data?: string
 }
 ```
 
@@ -266,14 +245,14 @@ Standardized error response structure:
 
 ```typescript
 interface ErrorResponse {
-	status: number;
-	message: string;
-	timestamp: string;
-	path: string;
-	requestId?: string;
-	code?: string;
-	details?: Record<string, any>;
-	errors?: Array<{ property: string; constraints: Record<string, string> }>;
+	status: number
+	message: string
+	timestamp: string
+	path: string
+	requestId?: string
+	code?: string
+	details?: Record<string, any>
+	errors?: Array<{ property: string; constraints: Record<string, string> }>
 }
 ```
 
@@ -282,19 +261,19 @@ interface ErrorResponse {
 ### Component Types
 
 ```typescript
-type MiddlewareType = Constructor<IMiddleware> | IMiddleware;
-type GuardType = Constructor<IGuard> | IGuard;
-type PipeType = Constructor<IPipe> | IPipe;
-type FilterType = Constructor<IFilter> | IFilter;
-type PluginType = Constructor<IPlugin> | IPlugin;
+type MiddlewareType = Constructor<IMiddleware> | IMiddleware
+type GuardType = Constructor<IGuard> | IGuard
+type PipeType = Constructor<IPipe> | IPipe
+type FilterType = Constructor<IFilter> | IFilter
+type PluginType = Constructor<IPlugin> | IPlugin
 ```
 
 ### HTTP Method Options
 
 ```typescript
 interface HttpMethodOptions {
-	prefix?: string | null;
-	version?: number | null | typeof VERSION_NEUTRAL | number[];
+	prefix?: string | null
+	version?: number | null | typeof VERSION_NEUTRAL | number[]
 }
 ```
 
@@ -303,14 +282,12 @@ interface HttpMethodOptions {
 ### Implementing a Custom Middleware
 
 ```typescript
-import { IMiddleware } from "@honest/framework";
+import { IMiddleware } from '@honest/framework'
 
 class LoggerMiddleware implements IMiddleware {
 	async use(c: Context, next: Next): Promise<Response | void> {
-		console.log(
-			`[${new Date().toISOString()}] ${c.req.method} ${c.req.path}`,
-		);
-		return next();
+		console.log(`[${new Date().toISOString()}] ${c.req.method} ${c.req.path}`)
+		return next()
 	}
 }
 ```
@@ -318,17 +295,17 @@ class LoggerMiddleware implements IMiddleware {
 ### Implementing a Custom Guard
 
 ```typescript
-import { IGuard } from "@honest/framework";
+import { IGuard } from '@honest/framework'
 
 class AuthGuard implements IGuard {
 	async canActivate(context: Context): Promise<boolean> {
-		const token = context.req.header("authorization");
-		return !!token && this.validateToken(token);
+		const token = context.req.header('authorization')
+		return !!token && this.validateToken(token)
 	}
 
 	private validateToken(token: string): boolean {
 		// Token validation logic
-		return true;
+		return true
 	}
 }
 ```
@@ -336,20 +313,20 @@ class AuthGuard implements IGuard {
 ### Implementing a Custom Pipe
 
 ```typescript
-import { ArgumentMetadata, IPipe } from "@honest/framework";
+import { ArgumentMetadata, IPipe } from '@honest/framework'
 
 class ValidationPipe implements IPipe {
 	transform(value: unknown, metadata: ArgumentMetadata): unknown {
-		if (metadata.type === "body" && metadata.metatype) {
+		if (metadata.type === 'body' && metadata.metatype) {
 			// Validation logic
-			return this.validate(value, metadata.metatype);
+			return this.validate(value, metadata.metatype)
 		}
-		return value;
+		return value
 	}
 
 	private validate(value: unknown, type: Constructor): unknown {
 		// Validation implementation
-		return value;
+		return value
 	}
 }
 ```
@@ -357,21 +334,21 @@ class ValidationPipe implements IPipe {
 ### Implementing a Custom Filter
 
 ```typescript
-import { IFilter } from "@honest/framework";
+import { IFilter } from '@honest/framework'
 
 class ValidationExceptionFilter implements IFilter {
 	catch(exception: Error, context: Context): Response | undefined {
-		if (exception.name === "ValidationError") {
+		if (exception.name === 'ValidationError') {
 			return context.json(
 				{
 					status: 400,
-					message: "Validation failed",
-					errors: exception.details,
+					message: 'Validation failed',
+					errors: exception.details
 				},
-				400,
-			);
+				400
+			)
 		}
-		return undefined; // Let other filters handle it
+		return undefined // Let other filters handle it
 	}
 }
 ```
@@ -379,16 +356,16 @@ class ValidationExceptionFilter implements IFilter {
 ### Creating a Plugin
 
 ```typescript
-import { Application, IPlugin } from "@honest/framework";
+import { Application, IPlugin } from '@honest/framework'
 
 class LoggerPlugin implements IPlugin {
 	async beforeModulesRegistered(app: Application, hono: Hono): Promise<void> {
-		console.log("Setting up logging...");
+		console.log('Setting up logging...')
 		// Plugin setup logic
 	}
 
 	async afterModulesRegistered(app: Application, hono: Hono): Promise<void> {
-		console.log("Logging setup complete");
+		console.log('Logging setup complete')
 		// Plugin cleanup logic
 	}
 }
@@ -397,42 +374,38 @@ class LoggerPlugin implements IPlugin {
 ### Application Configuration
 
 ```typescript
-import { Application } from "@honest/framework";
+import { Application } from '@honest/framework'
 
 const { app, hono } = await Application.create(AppModule, {
 	container: customContainer,
 	routing: {
-		prefix: "/api",
-		version: 1,
+		prefix: '/api',
+		version: 1
 	},
 	components: {
 		middleware: [LoggerMiddleware, CorsMiddleware],
 		guards: [AuthGuard],
 		pipes: [ValidationPipe],
-		filters: [HttpExceptionFilter],
+		filters: [HttpExceptionFilter]
 	},
 	plugins: [LoggerPlugin],
 	onError: (error, context) => {
-		return context.json({ error: error.message }, 500);
+		return context.json({ error: error.message }, 500)
 	},
 	notFound: (context) => {
-		return context.json({ message: "Not found" }, 404);
-	},
-});
+		return context.json({ message: 'Not found' }, 404)
+	}
+})
 ```
 
 ## Best Practices
 
 1. **Use interfaces for contracts** - Define clear contracts between components
-2. **Extend existing interfaces** - Build upon framework interfaces when
-   possible
-3. **Maintain type safety** - Ensure all implementations satisfy their
-   interfaces
+2. **Extend existing interfaces** - Build upon framework interfaces when possible
+3. **Maintain type safety** - Ensure all implementations satisfy their interfaces
 4. **Document interfaces** - Provide clear documentation for custom interfaces
-5. **Use generics appropriately** - Leverage TypeScript generics for flexible
-   types
-6. **Keep interfaces focused** - Each interface should have a single
-   responsibility
+5. **Use generics appropriately** - Leverage TypeScript generics for flexible types
+6. **Keep interfaces focused** - Each interface should have a single responsibility
 
 ## Framework Integration
 
