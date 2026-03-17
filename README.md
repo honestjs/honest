@@ -48,6 +48,16 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 	</a>
 </p>
 
+## Cursor / Agent skills
+
+Install the Honest skill so your editor agent (e.g. Cursor) can use Honest-specific guidance:
+
+```bash
+bunx skills add https://github.com/honestjs/skills --skill honest
+```
+
+See [honestjs/skills](https://github.com/honestjs/skills) for details.
+
 > 🚨 **Early Development Warning** 🚨
 >
 > Honest is currently in early development (pre-v1.0.0). Please be aware that:
