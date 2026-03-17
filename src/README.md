@@ -6,6 +6,7 @@ with decorator-based routing, dependency injection, and modular architecture.
 ## Directory Structure
 
 - **`application.ts`** - Main application class and entry point
+- **`application-context.ts`** - App-level registry for pipeline data (see Application context below)
 - **`components/`** - Reusable UI components and layouts
 - **`constants/`** - Framework constants and configuration values
 - **`decorators/`** - TypeScript decorators for routing, dependency injection, and middleware

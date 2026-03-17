@@ -171,9 +171,9 @@ normalizePath('users') // Returns: '/users'
 normalizePath('/users') // Returns: '/users'
 normalizePath('users/') // Returns: '/users'
 normalizePath('/users/') // Returns: '/users'
-normalizePath('') // Returns: ''
+normalizePath('') // Returns: '/'
 normalizePath('/') // Returns: '/'
-normalizePath(undefined) // Returns: ''
+normalizePath(undefined) // Returns: '/'
 ```
 
 #### `stripEndSlash(path: string): string`

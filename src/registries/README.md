@@ -20,7 +20,7 @@ The main metadata registry that stores all decorator and component information:
 - **Service registration** - Tracks registered services for dependency injection
 - **Module configuration** - Stores module options and dependencies
 - **Parameter metadata** - Tracks parameter decorators and their configurations
-- **Component registrations** - Manages global, controller, and handler-level components
+- **Component registrations** - Manages controller-level and handler-level components (global components are managed by ComponentManager per application)
 - **Type definitions** - Defines ComponentType, ComponentInstance, and ComponentTypeMap
 
 ### `route.registry.ts`
@@ -102,21 +102,7 @@ Manages component registrations at different levels:
 
 #### Global Components
 
-Components applied to all routes:
-
-```typescript
-// Register global middleware
-MetadataRegistry.registerGlobal('middleware', LoggerMiddleware)
-
-// Register global guards
-MetadataRegistry.registerGlobal('guard', AuthGuard)
-
-// Register global pipes
-MetadataRegistry.registerGlobal('pipe', ValidationPipe)
-
-// Register global filters
-MetadataRegistry.registerGlobal('filter', HttpExceptionFilter)
-```
+Global components are configured via `Application.create(Module, { components: { ... } })` or on the `ComponentManager` instance (e.g. `componentManager.registerGlobal('middleware', LoggerMiddleware)`). They are not stored in MetadataRegistry.
 
 #### Controller Components
 
@@ -174,6 +160,8 @@ const options = MetadataRegistry.getModuleOptions(AppModule)
 ```
 
 ## Route Registry Features
+
+`RouteRegistry` is **instance-based**: each `Application` has its own registry. Use `app.getRoutes()` to get the list of routes; the registry’s methods (`getRoutes()`, `getRoutesByController()`, etc.) are instance methods on that registry.
 
 ### Route Information Storage
 
@@ -262,26 +250,28 @@ const v1Routes = routes.filter((r) => r.version === '/v1')
 ### Custom Route Analysis
 
 ```typescript
-// Analyze route patterns
-const routes = RouteRegistry.getRoutes()
+// Get routes from your Application (app.getRoutes() returns the RouteRegistry data)
+const routes = app.getRoutes()
 
 // Find routes with parameters
 const parameterizedRoutes = routes.filter((r) => r.parameters.some((p) => p.name === 'param'))
 
-// Find routes by HTTP method
-const postRoutes = RouteRegistry.getRoutesByMethod('POST')
-
-// Find routes matching a pattern
-const adminRoutes = RouteRegistry.getRoutesByPath(/\/admin\//)
+// If you have a RouteRegistry instance (e.g. in a plugin), use its instance methods:
+// const postRoutes = routeRegistry.getRoutesByMethod('POST')
+// const adminRoutes = routeRegistry.getRoutesByPath(/\/admin\//)
+const postRoutes = routes.filter((r) => r.method.toUpperCase() === 'POST')
+const adminRoutes = routes.filter((r) => /\/admin\//.test(r.fullPath))
 ```
 
 ### Component Registration
 
 ```typescript
-// Register custom components
-MetadataRegistry.registerGlobal('middleware', CustomMiddleware)
+// Controller- and handler-level components (via MetadataRegistry)
 MetadataRegistry.registerController('guard', AdminController, AdminGuard)
 MetadataRegistry.registerHandler('pipe', 'UsersController:createUser', ValidationPipe)
+
+// Global components: pass to Application.create(Module, { components: { middleware: [CustomMiddleware] } })
+// or use ComponentManager.registerGlobal() when you have the manager instance
 ```
 
 ### Service Management

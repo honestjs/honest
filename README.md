@@ -65,101 +65,66 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 > [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community
 > guidelines.
 
-## Features
-
-- 🚀 **High Performance** - Built on top of the ultra-fast Hono framework
-- 📦 **Modular Architecture** - Organize your code into reusable, feature-focused modules
-- 💉 **Dependency Injection** - Built-in DI container for better code organization and testing
-- 🔌 **Plugin System** - Extend functionality through a flexible plugin system
-- 🛣️ **Advanced Routing** - Support for versioning, prefixes, and nested routes
-- 🔒 **Built-in Security** - Guards, middleware, and error handling out of the box
-- 🔄 **Request Pipeline** - Powerful middleware, guards, pipes, and filters
-- 📝 **TypeScript-First** - Built with TypeScript for excellent type safety and IDE support
-
 ## Quick Start
 
-### Using Honest CLI
-
-The fastest way to create a new Honest application is to use the Honest CLI:
-
 ```bash
-# Install Honest CLI globally
 bun add -g @honestjs/cli
-
-# Create a new project
-honestjs new my-project # alias: honest, hnjs
+honestjs new my-project   # alias: honest, hnjs
 cd my-project
-
-# Start the development server
 bun dev
 ```
 
-This will create a new project with a standard directory structure and all necessary configuration files.
+This creates a new project with a standard structure and config. Use the [website](https://github.com/honestjs/website) for full docs.
 
-### Manual Setup
+## Features
 
-If you prefer to set up your project manually, follow these steps:
+- **🚀 High performance** — Built on Hono for maximum speed and minimal overhead.
+- **🏗️ Familiar architecture** — Decorator-based API inspired by NestJS; TypeScript-first.
+- **💉 Dependency injection** — Built-in DI container for clean, testable code and automatic wiring.
+- **🔌 Plugin system** — Extend the app with custom plugins, middleware, pipes, and filters.
+- **🛣️ Advanced routing** — Prefixes, API versioning, and nested route organization.
+- **🛡️ Request pipeline** — Middleware, guards, pipes, and filters at app, controller, or handler level.
+- **📝 TypeScript-first** — Strong typing and great IDE support out of the box.
+- **🖥️ MVC & SSR** — Full-stack apps with Hono JSX views; use the `mvc` template or the docs.
 
-1. Install packages
-
-```bash
-bun add honestjs hono reflect-metadata
-# or
-pnpm add honestjs hono reflect-metadata
-# or
-yarn add honestjs hono reflect-metadata
-# or
-npm install honestjs hono reflect-metadata
-```
-
-2. Create your first controller:
-
-```typescript
-// app.controller.ts
-import { Controller, Get } from 'honestjs'
-
-@Controller()
-class AppController {
-	@Get()
-	helloWorld() {
-		return 'Hello, World!'
-	}
-}
-
-export default AppController
-```
-
-3. Create a module:
-
-```typescript
-// app.module.ts
-import { Module } from 'honestjs'
-import { AppController } from './app.controller.ts'
-
-@Module({
-	controllers: [AppController]
-})
-class AppModule {}
-
-export default AppModule
-```
-
-4. Bootstrap your application:
+### In code
 
 ```typescript
 import 'reflect-metadata'
-import { Application } from 'honestjs'
-import { AppModule } from './app.module'
+import { Application, Controller, Get, Module, Service, UseGuards } from 'honestjs'
+
+@Service()
+class AppService {
+	hello(): string {
+		return 'Hello, Honest!'
+	}
+}
+
+@Controller()
+class AppController {
+	constructor(private readonly appService: AppService) {}
+
+	@Get()
+	// @UseGuards(AuthGuard)
+	// @UsePipes(ValidationPipe)
+	hello() {
+		return this.appService.hello()
+	}
+}
+
+@Module({
+	controllers: [AppController],
+	services: [AppService]
+})
+class AppModule {}
 
 const { app, hono } = await Application.create(AppModule, {
-	routing: {
-		prefix: 'api',
-		version: 1
-	}
+	routing: { prefix: 'api', version: 1 }
 })
-
 export default hono
 ```
+
+Controllers, services, and modules are wired by decorators; use **guards** for auth, **pipes** for validation, and **filters** for error handling. See the [documentation](https://github.com/honestjs/website) for details.
 
 ## License
 

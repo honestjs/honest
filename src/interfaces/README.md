@@ -18,6 +18,9 @@ Main configuration interface for the Honest application:
 
 ```typescript
 interface HonestOptions {
+	debug?: boolean | { routes?: boolean; plugins?: boolean }
+	strict?: { requireRoutes?: boolean }
+	deprecations?: { printPreV1Warning?: boolean }
 	container?: DiContainer
 	hono?: {
 		strict?: boolean
@@ -34,7 +37,7 @@ interface HonestOptions {
 		pipes?: PipeType[]
 		filters?: FilterType[]
 	}
-	plugins?: PluginType[]
+	plugins?: PluginEntry[]
 	onError?: (error: Error, context: Context) => Response | Promise<Response>
 	notFound?: (context: Context) => Response | Promise<Response>
 }
