@@ -135,6 +135,36 @@ describe('Application', () => {
 		expect(ctx.has('test.key')).toBe(true)
 	})
 
+	test('getContainer() returns the DI container and can resolve services', async () => {
+		@Service()
+		class GreetService {
+			greet(name: string) {
+				return `Hello, ${name}`
+			}
+		}
+
+		@Controller('/greet')
+		class GreetController {
+			constructor(private readonly svc: GreetService) {}
+			@Get()
+			index() {
+				return { message: this.svc.greet('world') }
+			}
+		}
+
+		@Module({ controllers: [GreetController], services: [GreetService] })
+		class GreetModule {}
+
+		const { app } = await Application.create(GreetModule)
+		const container = app.getContainer()
+
+		expect(container).toBeDefined()
+		expect(container).toBe(app.getContainer())
+
+		const svc = container.resolve(GreetService)
+		expect(svc.greet('test')).toBe('Hello, test')
+	})
+
 	test('plain plugin without processors still works', async () => {
 		const order: string[] = []
 		const TestPlugin = {

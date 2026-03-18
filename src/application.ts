@@ -160,6 +160,10 @@ export class Application {
 		return this.hono
 	}
 
+	getContainer(): DiContainer {
+		return this.container
+	}
+
 	getContext(): IApplicationContext {
 		return this.context
 	}
