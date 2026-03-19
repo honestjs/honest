@@ -300,6 +300,78 @@ export class Application {
 		return debug === true || (typeof debug === 'object' && Boolean(debug.routes))
 	}
 
+	private emitStartupGuide(error: unknown, rootModule: Constructor): void {
+		const startupGuide = this.options.startupGuide
+		if (!startupGuide) {
+			return
+		}
+
+		const verbose = typeof startupGuide === 'object' && Boolean(startupGuide.verbose)
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		const hints = this.createStartupGuideHints(errorMessage)
+
+		this.diagnosticsEmitter.emit({
+			level: 'warn',
+			category: 'startup',
+			message: 'Startup guide',
+			details: {
+				rootModule: rootModule.name,
+				errorMessage,
+				hints,
+				verbose
+			}
+		})
+
+		if (verbose) {
+			this.diagnosticsEmitter.emit({
+				level: 'warn',
+				category: 'startup',
+				message: 'Startup guide (verbose)',
+				details: {
+					steps: [
+						'Verify decorators are present for controllers/services used by DI and routing.',
+						"Ensure 'reflect-metadata' is imported once at entry and 'emitDecoratorMetadata' is enabled.",
+						'Enable debug.startup for extra startup diagnostics and timing details.'
+					]
+				}
+			})
+		}
+	}
+
+	private createStartupGuideHints(errorMessage: string): string[] {
+		const hints = new Set<string>()
+
+		hints.add('Check module wiring: root module imports, controllers, and services should be registered correctly.')
+
+		if (errorMessage.includes('not decorated with @Controller()')) {
+			hints.add('Add @Controller() to the class or remove it from module.controllers.')
+		}
+
+		if (errorMessage.includes('has no route handlers')) {
+			hints.add('Add at least one HTTP method decorator such as @Get() or @Post() in the controller.')
+		}
+
+		if (errorMessage.includes('not decorated with @Service()')) {
+			hints.add('Add @Service() to injectable classes used in constructor dependencies.')
+		}
+
+		if (errorMessage.includes('constructor metadata is missing') || errorMessage.includes('reflect-metadata')) {
+			hints.add("Import 'reflect-metadata' in your entry file and enable 'emitDecoratorMetadata' in tsconfig.")
+		}
+
+		if (errorMessage.includes('Strict mode: no routes were registered')) {
+			hints.add('Disable strict.requireRoutes for empty modules, or add a controller with at least one route.')
+		}
+
+		if (errorMessage.includes('Plugin ordering error') || errorMessage.includes('Plugin capability error')) {
+			hints.add(
+				'Check plugin order and before/after constraints, then ensure required capabilities are provided earlier.'
+			)
+		}
+
+		return [...hints]
+	}
+
 	async register(moduleClass: Constructor): Promise<Application> {
 		const controllers = await this.componentManager.registerModule(moduleClass)
 		const debugRoutes = this.shouldEmitRouteDiagnostics()
@@ -402,7 +474,11 @@ export class Application {
 						startupDurationMs: Date.now() - startupStartedAt
 					}
 				})
-				throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
+				const strictError = new Error(
+					'Strict mode: no routes were registered. Check your module/controller decorators.'
+				)
+				app.emitStartupGuide(strictError, rootModule)
+				throw strictError
 			}
 			if (debugRoutes) {
 				app.diagnosticsEmitter.emit({
@@ -440,6 +516,8 @@ export class Application {
 
 			return { app, hono: app.getApp() }
 		} catch (error: unknown) {
+			app.emitStartupGuide(error, rootModule)
+
 			if (debugStartup && !strictNoRoutesFailureEmitted) {
 				app.diagnosticsEmitter.emit({
 					level: 'error',

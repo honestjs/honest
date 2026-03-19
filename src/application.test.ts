@@ -491,6 +491,65 @@ describe('Application', () => {
 		).toBe(true)
 	})
 
+	test('startupGuide emits actionable hints for strict no-routes startup failure', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await expect(
+			Application.create(EmptyModule, {
+				strict: { requireRoutes: true },
+				startupGuide: true,
+				diagnostics
+			})
+		).rejects.toThrow('Strict mode: no routes were registered')
+
+		const guideEvent = events.find((event) => event.category === 'startup' && event.message === 'Startup guide')
+		expect(guideEvent).toBeDefined()
+		expect(Array.isArray((guideEvent?.details as Record<string, unknown>)?.hints)).toBe(true)
+		expect(
+			((guideEvent?.details as Record<string, unknown>)?.hints as string[]).some((hint) =>
+				hint.includes('strict.requireRoutes')
+			)
+		).toBe(true)
+	})
+
+	test('startupGuide emits actionable hints for missing @Controller() startup failure', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await expect(
+			Application.create(BrokenControllerModule, {
+				startupGuide: { verbose: true },
+				diagnostics
+			})
+		).rejects.toThrow('is not decorated with @Controller()')
+
+		const guideEvent = events.find((event) => event.category === 'startup' && event.message === 'Startup guide')
+		expect(guideEvent).toBeDefined()
+		expect(
+			((guideEvent?.details as Record<string, unknown>)?.hints as string[]).some((hint) =>
+				hint.includes('@Controller()')
+			)
+		).toBe(true)
+
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'startup' &&
+					event.level === 'warn' &&
+					event.message === 'Startup guide (verbose)'
+			)
+		).toBe(true)
+	})
+
 	test('debug.routes emits per-controller route registration timing diagnostics', async () => {
 		const events: DiagnosticEvent[] = []
 		const diagnostics: IDiagnosticsEmitter = {

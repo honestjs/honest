@@ -8,6 +8,13 @@ import type { DiContainer } from './di-container.interface'
  */
 export interface HonestOptions {
 	/**
+	 * Emit actionable startup guidance when initialization fails.
+	 * - `true` enables concise hints
+	 * - object form enables verbose hints with additional context
+	 */
+	startupGuide?: boolean | { verbose?: boolean }
+
+	/**
 	 * Enable debug logging for startup diagnostics.
 	 * - `true` enables all debug logs
 	 * - object form enables specific categories
