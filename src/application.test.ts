@@ -4,7 +4,7 @@ import { Application } from './application'
 import { Body, Controller, Get, Module, Post, Service, UseFilters } from './decorators'
 import { Container } from './di/container'
 import { createParamDecorator } from './helpers'
-import type { IFilter, IGuard } from './interfaces'
+import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard } from './interfaces'
 
 @Controller('/health')
 class TestController {
@@ -260,6 +260,55 @@ describe('Application', () => {
 		await expect(Application.create(EmptyModule, { strict: { requireRoutes: true } })).rejects.toThrow(
 			'Strict mode: no routes were registered'
 		)
+	})
+
+	test('startup diagnostics includes route count in debug mode', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await Application.create(TestModule, {
+			debug: true,
+			diagnostics
+		})
+
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'startup' &&
+					event.level === 'info' &&
+					event.message.includes('Application registered') &&
+					Number((event.details as Record<string, unknown>)?.routeCount) >= 1
+			)
+		).toBe(true)
+	})
+
+	test('strict.requireRoutes emits startup diagnostic error before throwing', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await expect(
+			Application.create(EmptyModule, {
+				strict: { requireRoutes: true },
+				diagnostics
+			})
+		).rejects.toThrow('Strict mode: no routes were registered')
+
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'startup' &&
+					event.level === 'error' &&
+					event.message.includes('Strict mode failed')
+			)
+		).toBe(true)
 	})
 
 	test('fails startup on duplicate method/path routes', async () => {

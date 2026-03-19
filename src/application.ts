@@ -140,6 +140,7 @@ export class Application {
 		const debug = options.debug
 		const debugPlugins = debug === true || (typeof debug === 'object' && debug.plugins)
 		const debugRoutes = debug === true || (typeof debug === 'object' && debug.routes)
+		const debugStartup = debug === true || debugRoutes
 
 		if (debugPlugins && entries.length > 0) {
 			app.diagnosticsEmitter.emit({
@@ -161,7 +162,27 @@ export class Application {
 		await app.register(rootModule)
 
 		const routes = app.getRoutes()
+		if (debugStartup) {
+			app.diagnosticsEmitter.emit({
+				level: 'info',
+				category: 'startup',
+				message: `Application registered ${routes.length} route(s)`,
+				details: {
+					routeCount: routes.length,
+					rootModule: rootModule.name
+				}
+			})
+		}
 		if (options.strict?.requireRoutes && routes.length === 0) {
+			app.diagnosticsEmitter.emit({
+				level: 'error',
+				category: 'startup',
+				message: 'Strict mode failed: no routes were registered',
+				details: {
+					rootModule: rootModule.name,
+					requireRoutes: true
+				}
+			})
 			throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
 		}
 		if (debugRoutes) {
