@@ -5,6 +5,7 @@ import { Body, Controller, Get, Module, Post, Service, UseFilters } from './deco
 import { Container } from './di/container'
 import { createParamDecorator } from './helpers'
 import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard } from './interfaces'
+import { MetadataRegistry } from './registries'
 
 @Controller('/health')
 class TestController {
@@ -126,6 +127,17 @@ class DiagnosticsBController {
 
 @Module({ controllers: [DiagnosticsAController, DiagnosticsBController] })
 class DiagnosticsRoutesModule {}
+
+@Controller('/runtime-metadata')
+class RuntimeMetadataController {
+	@Get()
+	index() {
+		throw new Error('runtime metadata baseline error')
+	}
+}
+
+@Module({ controllers: [RuntimeMetadataController] })
+class RuntimeMetadataModule {}
 
 describe('Application', () => {
 	test('create() registers module and getRoutes() returns expected route', async () => {
@@ -458,6 +470,24 @@ describe('Application', () => {
 					)
 			)
 		).toBe(true)
+	})
+
+	test('metadata changes after app creation do not affect running app behavior', async () => {
+		const { hono } = await Application.create(RuntimeMetadataModule)
+
+		const InjectedFilter: IFilter = {
+			catch(_exception: Error, context: any): Response {
+				return context.json({ injected: true }, 418)
+			}
+		}
+
+		MetadataRegistry.registerHandler('filter', 'RuntimeMetadataController:index', InjectedFilter)
+
+		const res = await hono.request(new Request('http://localhost/runtime-metadata'))
+		expect(res.status).toBe(500)
+		const body = await res.json()
+		expect(body.message).toContain('runtime metadata baseline error')
+		expect(body.injected).toBeUndefined()
 	})
 
 	test('fails startup on duplicate method/path routes', async () => {

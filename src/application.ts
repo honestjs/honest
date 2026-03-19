@@ -8,13 +8,14 @@ import type {
 	DiContainer,
 	HonestOptions,
 	IApplicationContext,
+	IMetadataRepository,
 	IPlugin,
 	PluginEntry,
 	PluginProcessor,
 	RouteInfo
 } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
-import { RouteRegistry, StaticMetadataRepository } from './registries'
+import { RouteRegistry, SnapshotMetadataRepository, StaticMetadataRepository } from './registries'
 import type { Constructor } from './types'
 import { isConstructor, isObject } from './utils'
 
@@ -30,13 +31,13 @@ export class Application {
 	private readonly container: DiContainer
 	private readonly context: IApplicationContext
 	private readonly routeRegistry: RouteRegistry
-	private readonly metadataRepository: StaticMetadataRepository
+	private readonly metadataRepository: IMetadataRepository
 	private readonly componentManager: ComponentManager
 	private readonly routeManager: RouteManager
 	private readonly diagnosticsEmitter: IDiagnosticsEmitter
 	private readonly options: HonestOptions
 
-	constructor(options: HonestOptions = {}) {
+	constructor(options: HonestOptions = {}, metadataRepository: IMetadataRepository = new StaticMetadataRepository()) {
 		this.options = isObject(options) ? options : {}
 
 		const debugPipeline =
@@ -54,7 +55,7 @@ export class Application {
 		this.context = new ApplicationContext()
 
 		this.routeRegistry = new RouteRegistry()
-		this.metadataRepository = new StaticMetadataRepository()
+		this.metadataRepository = metadataRepository
 
 		this.componentManager = new ComponentManager(this.container, this.metadataRepository, this.diagnosticsEmitter)
 		this.componentManager.setupGlobalComponents(this.options)
@@ -171,7 +172,8 @@ export class Application {
 		options: HonestOptions = {}
 	): Promise<{ app: Application; hono: Hono }> {
 		const startupStartedAt = Date.now()
-		const app = new Application(options)
+		const metadataSnapshot = SnapshotMetadataRepository.fromRootModule(rootModule)
+		const app = new Application(options, metadataSnapshot)
 		const entries = (options.plugins || []).map((entry) => app.normalizePluginEntry(entry))
 		const ctx = app.getContext()
 		const debug = options.debug
