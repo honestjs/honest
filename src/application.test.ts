@@ -108,6 +108,25 @@ class UnsafeParamController {
 @Module({ controllers: [UnsafeParamController] })
 class UnsafeParamModule {}
 
+@Controller('/diag-a')
+class DiagnosticsAController {
+	@Get()
+	index() {
+		return { controller: 'a' }
+	}
+}
+
+@Controller('/diag-b')
+class DiagnosticsBController {
+	@Get()
+	index() {
+		return { controller: 'b' }
+	}
+}
+
+@Module({ controllers: [DiagnosticsAController, DiagnosticsBController] })
+class DiagnosticsRoutesModule {}
+
 describe('Application', () => {
 	test('create() registers module and getRoutes() returns expected route', async () => {
 		const { app, hono } = await Application.create(TestModule)
@@ -373,6 +392,67 @@ describe('Application', () => {
 					event.category === 'startup' &&
 					event.level === 'error' &&
 					event.message === 'Application startup failed' &&
+					String((event.details as Record<string, unknown>)?.errorMessage || '').includes(
+						'is not decorated with @Controller()'
+					)
+			)
+		).toBe(true)
+	})
+
+	test('debug.routes emits per-controller route registration timing diagnostics', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await Application.create(DiagnosticsRoutesModule, {
+			debug: { routes: true, startup: false },
+			diagnostics
+		})
+
+		const controllerEvents = events.filter(
+			(event) =>
+				event.category === 'routes' &&
+				event.level === 'info' &&
+				event.message === 'Registered controller routes'
+		)
+
+		expect(controllerEvents.length).toBeGreaterThanOrEqual(2)
+		expect(
+			controllerEvents.every((event) => {
+				const details = (event.details || {}) as Record<string, unknown>
+				return (
+					typeof details.controller === 'string' &&
+					Number(details.routeCountAdded) >= 1 &&
+					Number(details.registrationDurationMs) >= 0
+				)
+			})
+		).toBe(true)
+	})
+
+	test('debug.routes emits per-controller failure diagnostics when registration throws', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await expect(
+			Application.create(BrokenControllerModule, {
+				debug: { routes: true, startup: false },
+				diagnostics
+			})
+		).rejects.toThrow('is not decorated with @Controller()')
+
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'routes' &&
+					event.level === 'error' &&
+					event.message === 'Failed to register controller routes' &&
 					String((event.details as Record<string, unknown>)?.errorMessage || '').includes(
 						'is not decorated with @Controller()'
 					)

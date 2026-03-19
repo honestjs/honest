@@ -120,11 +120,47 @@ export class Application {
 		}
 	}
 
+	private shouldEmitRouteDiagnostics(): boolean {
+		const debug = this.options.debug
+		return debug === true || (typeof debug === 'object' && Boolean(debug.routes))
+	}
+
 	async register(moduleClass: Constructor): Promise<Application> {
 		const controllers = await this.componentManager.registerModule(moduleClass)
+		const debugRoutes = this.shouldEmitRouteDiagnostics()
 
 		for (const controller of controllers) {
-			await this.routeManager.registerController(controller)
+			const controllerStartedAt = Date.now()
+			const routeCountBefore = this.routeRegistry.getRoutes().length
+			try {
+				await this.routeManager.registerController(controller)
+				if (debugRoutes) {
+					this.diagnosticsEmitter.emit({
+						level: 'info',
+						category: 'routes',
+						message: 'Registered controller routes',
+						details: {
+							controller: controller.name,
+							routeCountAdded: this.routeRegistry.getRoutes().length - routeCountBefore,
+							registrationDurationMs: Date.now() - controllerStartedAt
+						}
+					})
+				}
+			} catch (error: unknown) {
+				if (debugRoutes) {
+					this.diagnosticsEmitter.emit({
+						level: 'error',
+						category: 'routes',
+						message: 'Failed to register controller routes',
+						details: {
+							controller: controller.name,
+							registrationDurationMs: Date.now() - controllerStartedAt,
+							errorMessage: error instanceof Error ? error.message : String(error)
+						}
+					})
+				}
+				throw error
+			}
 		}
 
 		return this
