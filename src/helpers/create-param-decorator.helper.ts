@@ -17,17 +17,20 @@ import type { Constructor } from '../types'
  * });
  * ```
  */
-export function createParamDecorator<T = any>(type: string, factory?: (data: any, ctx: Context) => T) {
-	const fallbackFactory = (data: any, ctx: Context): unknown => {
+export function createParamDecorator<T = unknown>(
+	type: string,
+	factory?: (data: unknown, ctx: Context) => T | Promise<T>
+) {
+	const fallbackFactory = (data: unknown, ctx: Context): unknown => {
 		// Safe default when a custom decorator doesn't provide a factory.
 		// Returning context keeps the value usable and avoids hard runtime crashes.
 		if (data === undefined) {
 			return ctx
 		}
-		return ctx.get(data)
+		return ctx.get(String(data))
 	}
 
-	return (data?: any) => {
+	return (data?: unknown) => {
 		// eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
 		return (target: Object, propertyKey: string | symbol, parameterIndex: number): void => {
 			const controllerClass = target.constructor as Constructor
@@ -54,7 +57,7 @@ export function createParamDecorator<T = any>(type: string, factory?: (data: any
 				index: parameterIndex,
 				name: type,
 				data,
-				factory: (factory || fallbackFactory) as (data: any, ctx: Context) => any,
+				factory: (factory || fallbackFactory) as (data: unknown, ctx: Context) => unknown | Promise<unknown>,
 				metatype
 			} as ParameterMetadata)
 

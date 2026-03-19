@@ -1,4 +1,5 @@
 import type { Context, Next } from 'hono'
+import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY } from '../constants'
 import { createErrorResponse } from '../helpers'
 import type {
 	ArgumentMetadata,
@@ -154,7 +155,7 @@ export class ComponentManager {
 		return this.resolvePipes(pipeItems as PipeType[])
 	}
 
-	async executePipes(value: any, metadata: ArgumentMetadata, pipes: IPipe[]): Promise<any> {
+	async executePipes(value: unknown, metadata: ArgumentMetadata, pipes: IPipe[]): Promise<unknown> {
 		let transformedValue = value
 
 		for (const pipe of pipes) {
@@ -167,8 +168,8 @@ export class ComponentManager {
 	// -- Filters --
 
 	async handleException(exception: Error, context: Context): Promise<Response | undefined> {
-		const controller = context.get('__honest_controllerClass') as Constructor | undefined
-		const handlerName = context.get('__honest_handlerName') as string | undefined
+		const controller = context.get(HONEST_PIPELINE_CONTROLLER_KEY) as Constructor | undefined
+		const handlerName = context.get(HONEST_PIPELINE_HANDLER_KEY) as string | undefined
 
 		if (controller && handlerName) {
 			const handlerFilters = MetadataRegistry.getHandler('filter', `${controller.name}:${handlerName}`)

@@ -17,11 +17,11 @@ export interface ParameterMetadata {
 	/**
 	 * Additional parameter data (e.g., param name)
 	 */
-	data?: any
+	data?: unknown
 	/**
 	 * Optional factory function to transform the data
 	 */
-	factory: (data: any, ctx: Context) => any
+	factory: (data: unknown, ctx: Context) => unknown | Promise<unknown>
 	/**
 	 * The class type of the parameter
 	 */

@@ -1,3 +1,4 @@
+import { HONEST_PIPELINE_BODY_CACHE_KEY } from '../constants'
 import { createParamDecorator } from '../helpers'
 
 /**
@@ -5,10 +6,10 @@ import { createParamDecorator } from '../helpers'
  * @param data - Optional property name to extract from the body
  */
 export const Body = createParamDecorator('body', async (data, ctx) => {
-	let body = ctx.get('__honest.body.cache') as unknown
+	let body = ctx.get(HONEST_PIPELINE_BODY_CACHE_KEY) as unknown
 	if (body === undefined) {
 		body = await ctx.req.json()
-		ctx.set('__honest.body.cache', body)
+		ctx.set(HONEST_PIPELINE_BODY_CACHE_KEY, body)
 	}
 	if (data && body && typeof body === 'object') {
 		return (body as Record<string, unknown>)[String(data)]

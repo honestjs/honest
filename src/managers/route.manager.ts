@@ -1,6 +1,6 @@
 import type { Context, Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { VERSION_NEUTRAL } from '../constants'
+import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY, VERSION_NEUTRAL } from '../constants'
 import type { DiContainer, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { MetadataRegistry } from '../registries'
@@ -238,8 +238,8 @@ export class RouteManager {
 
 		const wrapperHandler = async (c: Context) => {
 			try {
-				c.set('__honest_controllerClass', controllerClass)
-				c.set('__honest_handlerName', String(handlerName))
+				c.set(HONEST_PIPELINE_CONTROLLER_KEY, controllerClass)
+				c.set(HONEST_PIPELINE_HANDLER_KEY, String(handlerName))
 
 				const guards = componentManager.getHandlerGuards(controllerClass, handlerName)
 
@@ -253,7 +253,7 @@ export class RouteManager {
 				}
 
 				const maxDecoratorIndex = handlerParams.length > 0 ? Math.max(...handlerParams.map((p) => p.index)) : -1
-				const args = new Array(Math.max(handler.length, maxDecoratorIndex + 1))
+				const args: unknown[] = new Array(Math.max(handler.length, maxDecoratorIndex + 1))
 
 				for (const param of handlerParams) {
 					if (typeof param.factory !== 'function') {
@@ -262,7 +262,7 @@ export class RouteManager {
 						)
 					}
 
-					const rawValue = param.factory(param.data, c)
+					const rawValue = await param.factory(param.data, c)
 
 					const transformedValue = await componentManager.executePipes(
 						rawValue,

@@ -55,6 +55,10 @@ const TrackingFilter: IFilter = {
 }
 
 const CustomParam = createParamDecorator('custom', (_data, c) => c.req.query('val') || 'default')
+const AsyncCustomParam = createParamDecorator('custom', async (_data, c) => {
+	await Promise.resolve()
+	return c.req.query('val') || 'default'
+})
 
 describe('Pipeline integration', () => {
 	test('execution order: middleware → guard → pipe → handler', async () => {
@@ -127,6 +131,28 @@ describe('Pipeline integration', () => {
 		const res = await hono.request(new Request('http://localhost/piped?val=raw'))
 		const body = await res.json()
 		expect(body.val).toBe('piped:raw')
+	})
+
+	test('async parameter factory resolves before pipes execute', async () => {
+		resetOrder()
+
+		@Controller('/async-param')
+		@UsePipes(TrackingPipe)
+		class AsyncParamController {
+			@Get()
+			index(@AsyncCustomParam() val: string) {
+				return { val }
+			}
+		}
+
+		@Module({ controllers: [AsyncParamController] })
+		class AsyncParamModule {}
+
+		const { hono } = await Application.create(AsyncParamModule)
+		const res = await hono.request(new Request('http://localhost/async-param?val=raw'))
+		const body = await res.json()
+		expect(body.val).toBe('piped:raw')
+		expect(order).toEqual(['pipe'])
 	})
 
 	test('multiple pipes chain correctly', async () => {
