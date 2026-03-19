@@ -12,7 +12,7 @@ export class ErrorHandler {
 	 * @returns A middleware function that formats and returns error responses using createErrorResponse
 	 */
 	static handle() {
-		return async (err: Error, c: Context) => {
+		return async (err: unknown, c: Context) => {
 			const { response, status } = createErrorResponse(err, c)
 			return c.json(response, status)
 		}

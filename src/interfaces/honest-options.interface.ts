@@ -1,6 +1,6 @@
 import type { Context } from 'hono'
 import type { VERSION_NEUTRAL } from '../constants'
-import type { FilterType, GuardType, MiddlewareType, PipeType, PluginEntry } from '../interfaces'
+import type { FilterType, GuardType, IDiagnosticsEmitter, MiddlewareType, PipeType, PluginEntry } from '../interfaces'
 import type { DiContainer } from './di-container.interface'
 
 /**
@@ -13,6 +13,11 @@ export interface HonestOptions {
 	 * - object form enables specific categories
 	 */
 	debug?: boolean | { routes?: boolean; plugins?: boolean }
+
+	/**
+	 * Optional diagnostics emitter for structured framework events.
+	 */
+	diagnostics?: IDiagnosticsEmitter
 
 	/**
 	 * Optional strict-mode checks for startup validation.

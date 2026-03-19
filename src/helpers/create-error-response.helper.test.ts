@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
+import { FrameworkError } from '../errors'
 import { HTTPException } from 'hono/http-exception'
 import { createErrorResponse } from './create-error-response.helper'
 
@@ -91,5 +92,24 @@ describe('createErrorResponse', () => {
 		const helper = makeContext('/api/users')
 		const { response } = await helper.run(new Error('fail'))
 		expect(response.path).toBe('/api/users')
+	})
+
+	test('FrameworkError includes code/category/remediation details', async () => {
+		const helper = makeContext('/framework-error')
+		const { response, status } = await helper.run(
+			new FrameworkError('Container bootstrap failed', {
+				status: 503,
+				code: 'DI_BOOTSTRAP_FAILED',
+				category: 'di',
+				remediation: 'Ensure all services are decorated with @Service()'
+			})
+		)
+
+		expect(status).toBe(503)
+		expect(response.code).toBe('DI_BOOTSTRAP_FAILED')
+		expect((response.details as Record<string, unknown>)?.category).toBe('di')
+		expect((response.details as Record<string, unknown>)?.remediation).toBe(
+			'Ensure all services are decorated with @Service()'
+		)
 	})
 })

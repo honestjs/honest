@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import { ApplicationContext } from './application-context'
+import { ConsoleDiagnosticsEmitter } from './diagnostics'
 import { Container } from './di'
 import { ErrorHandler, NotFoundHandler } from './handlers'
 import type {
+	IDiagnosticsEmitter,
 	DiContainer,
 	HonestOptions,
 	IApplicationContext,
@@ -31,12 +33,15 @@ export class Application {
 	private readonly metadataRepository: StaticMetadataRepository
 	private readonly componentManager: ComponentManager
 	private readonly routeManager: RouteManager
+	private readonly diagnosticsEmitter: IDiagnosticsEmitter
 	private readonly options: HonestOptions
 
 	constructor(options: HonestOptions = {}) {
 		this.options = isObject(options) ? options : {}
 
 		this.hono = new Hono(this.options.hono)
+
+		this.diagnosticsEmitter = this.options.diagnostics || new ConsoleDiagnosticsEmitter()
 
 		this.container = this.options.container || new Container()
 
@@ -63,7 +68,11 @@ export class Application {
 		)
 
 		if (this.options.deprecations?.printPreV1Warning) {
-			console.warn('[HonestJS] Pre-v1 warning: APIs may change before 1.0.0.')
+			this.diagnosticsEmitter.emit({
+				level: 'warn',
+				category: 'deprecations',
+				message: 'Pre-v1 warning: APIs may change before 1.0.0.'
+			})
 		}
 	}
 
@@ -125,10 +134,11 @@ export class Application {
 		const debugRoutes = debug === true || (typeof debug === 'object' && debug.routes)
 
 		if (debugPlugins && entries.length > 0) {
-			console.info(
-				'[HonestJS] Plugin order:',
-				entries.map(({ plugin }) => plugin.constructor?.name || 'AnonymousPlugin').join(' -> ')
-			)
+			app.diagnosticsEmitter.emit({
+				level: 'info',
+				category: 'plugins',
+				message: `Plugin order: ${entries.map(({ plugin }) => plugin.constructor?.name || 'AnonymousPlugin').join(' -> ')}`
+			})
 		}
 
 		for (const { plugin, preProcessors } of entries) {
@@ -147,10 +157,14 @@ export class Application {
 			throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
 		}
 		if (debugRoutes) {
-			console.info(
-				'[HonestJS] Registered routes:',
-				routes.map((route) => `${route.method.toUpperCase()} ${route.fullPath}`)
-			)
+			app.diagnosticsEmitter.emit({
+				level: 'info',
+				category: 'routes',
+				message: 'Registered routes',
+				details: {
+					routes: routes.map((route) => `${route.method.toUpperCase()} ${route.fullPath}`)
+				}
+			})
 		}
 
 		for (const { plugin, postProcessors } of entries) {
