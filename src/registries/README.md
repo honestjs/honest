@@ -24,6 +24,16 @@ The main metadata registry that stores all decorator and component information:
   ComponentManager per application)
 - **Type definitions** - Defines ComponentType, ComponentInstance, and ComponentTypeMap
 
+### `metadata.repository.ts`
+
+Metadata access adapters used by runtime managers:
+
+- **StaticMetadataRepository** - Reads live data from `MetadataRegistry`
+- **SnapshotMetadataRepository** - Captures immutable per-app metadata from a root module
+
+`Application.create()` uses a snapshot repository at startup so running apps are isolated from metadata mutations that
+occur later in process lifetime.
+
 ### `route.registry.ts`
 
 The route registry that provides public access to route information:
@@ -190,45 +200,20 @@ interface RouteInfo {
 Provides methods for querying and filtering routes:
 
 ```typescript
-// Get all routes
-const allRoutes = RouteRegistry.getRoutes()
+// Get all routes from Application public API
+const allRoutes = app.getRoutes()
 
-// Get routes by controller
-const userRoutes = RouteRegistry.getRoutesByController('UsersController')
-
-// Get routes by HTTP method
-const getRoutes = RouteRegistry.getRoutesByMethod('GET')
-
-// Get routes by path pattern
-const apiRoutes = RouteRegistry.getRoutesByPath(/^\/api\//)
+// If you have a RouteRegistry instance directly, use instance methods:
+// const userRoutes = routeRegistry.getRoutesByController('UsersController')
+// const getRoutes = routeRegistry.getRoutesByMethod('GET')
+// const apiRoutes = routeRegistry.getRoutesByPath(/^\/api\//)
 ```
 
 ### Route Registration
 
 Registers routes during the application setup:
 
-```typescript
-// Automatically called by the route manager
-RouteRegistry.registerRoute({
-	controller: 'UsersController',
-	handler: 'getUser',
-	method: 'GET',
-	prefix: '/api',
-	version: '/v1',
-	route: '/users',
-	path: '/:id',
-	fullPath: '/api/v1/users/:id',
-	parameters: [
-		{
-			index: 0,
-			name: 'param',
-			data: 'id',
-			factory: (data, ctx) => ctx.req.param(data),
-			metatype: String
-		}
-	]
-})
-```
+Route registration is handled internally by `RouteManager` against each app's instance-based `RouteRegistry`.
 
 ## Usage Examples
 
@@ -309,9 +294,10 @@ console.log(
 
 ## Framework Integration
 
-Registries are central to the framework architecture:
+Registries and repositories are central to the framework architecture:
 
 - **Decorator system** - Stores metadata from all decorators
+- **Metadata repositories** - Provide runtime metadata access with static and snapshot strategies
 - **Route management** - Provides route information for registration
 - **Component system** - Manages component registrations and retrieval
 - **Dependency injection** - Tracks service registrations

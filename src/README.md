@@ -15,7 +15,7 @@ with decorator-based routing, dependency injection, and modular architecture.
 - **`helpers/`** - Utility functions and helper methods
 - **`interfaces/`** - TypeScript interfaces and type definitions
 - **`managers/`** - Core framework managers for components and routing
-- **`registries/`** - Metadata and route registration systems
+- **`registries/`** - Metadata and route registration systems (including runtime metadata repositories)
 - **`types/`** - Custom TypeScript type definitions
 - **`utils/`** - Common utility functions and helpers
 
@@ -27,6 +27,7 @@ Honest is designed to provide a clean, decorator-based API for building web appl
 - **Dependency injection** for managing service instances and dependencies
 - **Modular architecture** for organizing application components
 - **Plugin system** for extending framework functionality
+- **Snapshot-based runtime metadata isolation** so each app instance runs on immutable startup metadata
 - **Version-aware routing** with support for API versioning
 - **Comprehensive error handling** with customizable filters
 - **Type-safe parameter binding** with transformation pipes

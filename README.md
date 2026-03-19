@@ -133,7 +133,14 @@ class AppController {
 class AppModule {}
 
 const { app, hono } = await Application.create(AppModule, {
-	debug: { routes: true, plugins: true },
+	debug: {
+		routes: true,
+		plugins: true,
+		pipeline: true,
+		di: true,
+		startup: true
+	},
+	diagnostics: myDiagnosticsEmitter,
 	strict: { requireRoutes: true },
 	deprecations: { printPreV1Warning: true },
 	container: myContainer,
@@ -162,6 +169,12 @@ export default hono
 
 Controllers, services, and modules are wired by decorators; use **guards** for auth, **pipes** for validation, and
 **filters** for error handling. See the [documentation](https://github.com/honestjs/website) for details.
+
+## Runtime Metadata Isolation
+
+Decorator metadata is still collected globally, but each application instance now runs on an immutable metadata snapshot
+captured during startup. This prevents metadata mutations made after bootstrap from changing behavior in already-running
+applications.
 
 ## License
 
