@@ -1,3 +1,5 @@
 export * from './component.manager'
+export * from './handler.invoker'
 export * from './parameter.resolver'
+export * from './pipeline.executor'
 export * from './route.manager'

@@ -1,9 +1,10 @@
 import type { Context, Hono } from 'hono'
-import { HTTPException } from 'hono/http-exception'
-import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY, VERSION_NEUTRAL } from '../constants'
+import { VERSION_NEUTRAL } from '../constants'
 import type { DiContainer, IMetadataRepository, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
+import { HandlerInvoker } from './handler.invoker'
 import { ParameterResolver } from './parameter.resolver'
+import { PipelineExecutor } from './pipeline.executor'
 import { StaticMetadataRepository } from '../registries'
 import { RouteRegistry } from '../registries/route.registry'
 import type { Constructor } from '../types'
@@ -21,6 +22,7 @@ export class RouteManager {
 	private routeRegistry: RouteRegistry
 	private componentManager: ComponentManager
 	private parameterResolver: ParameterResolver
+	private pipelineExecutor: PipelineExecutor
 	private metadataRepository: IMetadataRepository
 	private globalPrefix?: string
 	private globalVersion?: number | typeof VERSION_NEUTRAL | number[]
@@ -38,6 +40,11 @@ export class RouteManager {
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
 		this.parameterResolver = new ParameterResolver(this.componentManager)
+		this.pipelineExecutor = new PipelineExecutor(
+			this.componentManager,
+			this.parameterResolver,
+			new HandlerInvoker()
+		)
 		this.metadataRepository = metadataRepository
 		this.globalPrefix = options.prefix !== undefined ? this.normalizePath(options.prefix) : undefined
 		this.globalVersion = options.version
@@ -241,52 +248,19 @@ export class RouteManager {
 		})
 
 		const componentManager = this.componentManager
-		const parameterResolver = this.parameterResolver
+		const pipelineExecutor = this.pipelineExecutor
 
 		const wrapperHandler = async (c: Context) => {
 			try {
-				c.set(HONEST_PIPELINE_CONTROLLER_KEY, controllerClass)
-				c.set(HONEST_PIPELINE_HANDLER_KEY, String(handlerName))
-
-				const guards = componentManager.getHandlerGuards(controllerClass, handlerName)
-
-				for (const guard of guards) {
-					const canActivate = await guard.canActivate(c)
-					if (!canActivate) {
-						throw new HTTPException(403, {
-							message: `Forbidden by ${guard.constructor?.name || 'UnknownGuard'} at ${controllerClass.name}.${String(handlerName)}`
-						})
-					}
-				}
-
-				const args = await parameterResolver.resolveArguments({
-					controllerName: controllerClass.name,
+				return await pipelineExecutor.execute({
+					controllerClass,
 					handlerName,
-					handlerArity: handler.length,
+					handler,
 					handlerParams,
 					handlerPipes,
+					contextIndex,
 					context: c
 				})
-
-				const result = await handler(...args)
-
-				if (contextIndex !== undefined) {
-					return result
-				}
-
-				if (result instanceof Response) {
-					return result
-				}
-
-				if (isNil(result)) {
-					return c.json(null)
-				}
-
-				if (isString(result)) {
-					return c.text(result)
-				}
-
-				return c.json(result)
 			} catch (error) {
 				return componentManager.handleException(error as Error, c)
 			}

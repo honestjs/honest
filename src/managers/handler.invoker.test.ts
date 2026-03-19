@@ -1,0 +1,72 @@
+import { describe, expect, test } from 'bun:test'
+import type { Context } from 'hono'
+import { HandlerInvoker } from './handler.invoker'
+
+function createContextStub() {
+	return {
+		json(value: unknown) {
+			return new Response(JSON.stringify(value), {
+				headers: { 'content-type': 'application/json' }
+			})
+		},
+		text(value: string) {
+			return new Response(value, {
+				headers: { 'content-type': 'text/plain;charset=UTF-8' }
+			})
+		}
+	} as unknown as Context
+}
+
+describe('HandlerInvoker', () => {
+	test('passes through native Response', async () => {
+		const invoker = new HandlerInvoker()
+		const response = new Response('ok')
+
+		const result = await invoker.invoke({
+			handler: () => response,
+			args: [],
+			context: createContextStub()
+		})
+
+		expect(result).toBe(response)
+	})
+
+	test('maps string result to text response', async () => {
+		const invoker = new HandlerInvoker()
+
+		const result = await invoker.invoke({
+			handler: () => 'hello',
+			args: [],
+			context: createContextStub()
+		})
+
+		expect(result).toBeInstanceOf(Response)
+		expect(await (result as Response).text()).toBe('hello')
+	})
+
+	test('maps nil result to json null response', async () => {
+		const invoker = new HandlerInvoker()
+
+		const result = await invoker.invoke({
+			handler: () => undefined,
+			args: [],
+			context: createContextStub()
+		})
+
+		expect(result).toBeInstanceOf(Response)
+		expect(await (result as Response).text()).toBe('null')
+	})
+
+	test('returns raw result when context parameter exists', async () => {
+		const invoker = new HandlerInvoker()
+
+		const result = await invoker.invoke({
+			handler: () => ({ ok: true }),
+			args: [],
+			context: createContextStub(),
+			contextIndex: 0
+		})
+
+		expect(result).toEqual({ ok: true })
+	})
+})
