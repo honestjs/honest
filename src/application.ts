@@ -12,7 +12,7 @@ import type {
 	RouteInfo
 } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
-import { RouteRegistry } from './registries'
+import { RouteRegistry, StaticMetadataRepository } from './registries'
 import type { Constructor } from './types'
 import { isConstructor, isObject } from './utils'
 
@@ -28,6 +28,7 @@ export class Application {
 	private readonly container: DiContainer
 	private readonly context: IApplicationContext
 	private readonly routeRegistry: RouteRegistry
+	private readonly metadataRepository: StaticMetadataRepository
 	private readonly componentManager: ComponentManager
 	private readonly routeManager: RouteManager
 	private readonly options: HonestOptions
@@ -42,16 +43,24 @@ export class Application {
 		this.context = new ApplicationContext()
 
 		this.routeRegistry = new RouteRegistry()
+		this.metadataRepository = new StaticMetadataRepository()
 
-		this.componentManager = new ComponentManager(this.container)
+		this.componentManager = new ComponentManager(this.container, this.metadataRepository)
 		this.componentManager.setupGlobalComponents(this.options)
 
 		this.setupErrorHandlers()
 
-		this.routeManager = new RouteManager(this.hono, this.container, this.routeRegistry, this.componentManager, {
-			prefix: this.options.routing?.prefix,
-			version: this.options.routing?.version
-		})
+		this.routeManager = new RouteManager(
+			this.hono,
+			this.container,
+			this.routeRegistry,
+			this.componentManager,
+			this.metadataRepository,
+			{
+				prefix: this.options.routing?.prefix,
+				version: this.options.routing?.version
+			}
+		)
 
 		if (this.options.deprecations?.printPreV1Warning) {
 			console.warn('[HonestJS] Pre-v1 warning: APIs may change before 1.0.0.')

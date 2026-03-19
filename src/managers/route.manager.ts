@@ -1,10 +1,10 @@
 import type { Context, Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY, VERSION_NEUTRAL } from '../constants'
-import type { DiContainer, ParameterMetadata, RouteDefinition } from '../interfaces'
+import type { DiContainer, IMetadataRepository, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { ParameterResolver } from './parameter.resolver'
-import { MetadataRegistry } from '../registries'
+import { StaticMetadataRepository } from '../registries'
 import { RouteRegistry } from '../registries/route.registry'
 import type { Constructor } from '../types'
 import { isNil, isString, normalizePath } from '../utils'
@@ -21,6 +21,7 @@ export class RouteManager {
 	private routeRegistry: RouteRegistry
 	private componentManager: ComponentManager
 	private parameterResolver: ParameterResolver
+	private metadataRepository: IMetadataRepository
 	private globalPrefix?: string
 	private globalVersion?: number | typeof VERSION_NEUTRAL | number[]
 
@@ -29,6 +30,7 @@ export class RouteManager {
 		container: DiContainer,
 		routeRegistry: RouteRegistry,
 		componentManager: ComponentManager,
+		metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
 		options: { prefix?: string; version?: number | typeof VERSION_NEUTRAL | number[] } = {}
 	) {
 		this.hono = hono
@@ -36,6 +38,7 @@ export class RouteManager {
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
 		this.parameterResolver = new ParameterResolver(this.componentManager)
+		this.metadataRepository = metadataRepository
 		this.globalPrefix = options.prefix !== undefined ? this.normalizePath(options.prefix) : undefined
 		this.globalVersion = options.version
 
@@ -84,15 +87,15 @@ export class RouteManager {
 	}
 
 	async registerController(controllerClass: Constructor): Promise<void> {
-		if (!MetadataRegistry.hasController(controllerClass)) {
+		if (!this.metadataRepository.hasController(controllerClass)) {
 			throw new Error(`Controller ${controllerClass.name} is not decorated with @Controller()`)
 		}
 
-		const controllerPath = MetadataRegistry.getControllerPath(controllerClass) || ''
-		const controllerOptions = MetadataRegistry.getControllerOptions(controllerClass) || {}
-		const routes = MetadataRegistry.getRoutes(controllerClass) || []
-		const parameterMetadata = MetadataRegistry.getParameters(controllerClass) || new Map()
-		const contextIndices = MetadataRegistry.getContextIndices(controllerClass) || new Map()
+		const controllerPath = this.metadataRepository.getControllerPath(controllerClass) || ''
+		const controllerOptions = this.metadataRepository.getControllerOptions(controllerClass) || {}
+		const routes = this.metadataRepository.getRoutes(controllerClass) || []
+		const parameterMetadata = this.metadataRepository.getParameters(controllerClass) || new Map()
+		const contextIndices = this.metadataRepository.getContextIndices(controllerClass) || new Map()
 
 		const controllerSegment = this.normalizePath(controllerPath)
 

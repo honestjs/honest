@@ -6,6 +6,7 @@ import type {
 	DiContainer,
 	FilterType,
 	GuardType,
+	IMetadataRepository,
 	IFilter,
 	IGuard,
 	IMiddleware,
@@ -13,7 +14,8 @@ import type {
 	MiddlewareType,
 	PipeType
 } from '../interfaces'
-import { type ComponentType, type ComponentTypeMap, MetadataRegistry } from '../registries'
+import { type ComponentType, type ComponentTypeMap } from '../registries'
+import { StaticMetadataRepository } from '../registries'
 import type { Constructor } from '../types'
 import { isObject } from '../utils'
 
@@ -35,7 +37,10 @@ export class ComponentManager {
 		['filter', new Set<FilterType>()]
 	])
 
-	constructor(private readonly container: DiContainer) {}
+	constructor(
+		private readonly container: DiContainer,
+		private readonly metadataRepository: IMetadataRepository = new StaticMetadataRepository()
+	) {}
 
 	/**
 	 * Configures global components from application options.
@@ -88,8 +93,8 @@ export class ComponentManager {
 	): ComponentTypeMap[T][] {
 		const handlerKey = `${controller.name}:${String(handlerName)}`
 
-		const handlerComponents = MetadataRegistry.getHandler(type, handlerKey)
-		const controllerComponents = MetadataRegistry.getController(type, controller)
+		const handlerComponents = this.metadataRepository.getHandlerComponents(type, handlerKey)
+		const controllerComponents = this.metadataRepository.getControllerComponents(type, controller)
 		const globalComponents = Array.from(this.globalComponents.get(type) || [])
 
 		return [...globalComponents, ...controllerComponents, ...handlerComponents] as ComponentTypeMap[T][]
@@ -172,7 +177,10 @@ export class ComponentManager {
 		const handlerName = context.get(HONEST_PIPELINE_HANDLER_KEY) as string | undefined
 
 		if (controller && handlerName) {
-			const handlerFilters = MetadataRegistry.getHandler('filter', `${controller.name}:${handlerName}`)
+			const handlerFilters = this.metadataRepository.getHandlerComponents(
+				'filter',
+				`${controller.name}:${handlerName}`
+			)
 			if (handlerFilters.length > 0) {
 				const response = await this.executeFilters(handlerFilters as FilterType[], exception, context)
 				if (response) return response
@@ -180,7 +188,7 @@ export class ComponentManager {
 		}
 
 		if (controller) {
-			const controllerFilters = MetadataRegistry.getController('filter', controller)
+			const controllerFilters = this.metadataRepository.getControllerComponents('filter', controller)
 			if (controllerFilters.length > 0) {
 				const response = await this.executeFilters(controllerFilters as FilterType[], exception, context)
 				if (response) return response
@@ -235,7 +243,7 @@ export class ComponentManager {
 		}
 		registered.add(moduleClass)
 
-		const moduleOptions = MetadataRegistry.getModuleOptions(moduleClass)
+		const moduleOptions = this.metadataRepository.getModuleOptions(moduleClass)
 
 		if (!moduleOptions) {
 			throw new Error(`Module ${moduleClass.name} is not properly decorated with @Module()`)

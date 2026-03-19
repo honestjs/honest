@@ -1,11 +1,13 @@
-import type { DiContainer } from '../interfaces'
-import { MetadataRegistry } from '../registries'
+import type { DiContainer, IServiceRegistry } from '../interfaces'
+import { StaticServiceRegistry } from '../registries'
 import type { Constructor } from '../types'
 
 /**
  * Dependency Injection container that manages class instances and their dependencies
  */
 export class Container implements DiContainer {
+	constructor(private readonly serviceRegistry: IServiceRegistry = new StaticServiceRegistry()) {}
+
 	/**
 	 * Map of class constructors to their instances
 	 */
@@ -37,7 +39,7 @@ export class Container implements DiContainer {
 
 		const paramTypes = Reflect.getMetadata('design:paramtypes', target) || []
 		if (target.length > 0 && paramTypes.length === 0) {
-			if (!MetadataRegistry.isService(target)) {
+			if (!this.serviceRegistry.isService(target)) {
 				throw new Error(
 					`Cannot resolve ${target.name}: it is not decorated with @Service(). Did you forget to add @Service() to the class?`
 				)

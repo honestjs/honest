@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { Service } from '../decorators'
+import type { IServiceRegistry } from '../interfaces'
 import { Container } from './container'
 
 describe('Container', () => {
@@ -78,5 +79,20 @@ describe('Container', () => {
 
 		const container = new Container()
 		expect(() => container.resolve(BadDepController)).toThrow('Cannot resolve dependency at index 0')
+	})
+
+	test('resolve() uses injected service registry contract', () => {
+		class NeedsDep {
+			constructor(_dep: unknown) {}
+		}
+
+		const serviceRegistry: IServiceRegistry = {
+			isService() {
+				return true
+			}
+		}
+
+		const container = new Container(serviceRegistry)
+		expect(() => container.resolve(NeedsDep)).toThrow('constructor metadata is missing')
 	})
 })
