@@ -16,6 +16,7 @@ with decorator-based routing, dependency injection, and modular architecture.
 - **`interfaces/`** - TypeScript interfaces and type definitions
 - **`managers/`** - Core framework managers for components and routing
 - **`registries/`** - Metadata and route registration systems (including runtime metadata repositories)
+- **`testing/`** - Lightweight testing helpers for application, controller, and service-level tests
 - **`types/`** - Custom TypeScript type definitions
 - **`utils/`** - Common utility functions and helpers
 
@@ -27,8 +28,10 @@ Honest is designed to provide a clean, decorator-based API for building web appl
 - **Dependency injection** for managing service instances and dependencies
 - **Modular architecture** for organizing application components
 - **Plugin system** for extending framework functionality
+- **Deterministic plugin orchestration** with ordering constraints and capability contracts
 - **Snapshot-based runtime metadata isolation** so each app instance runs on immutable startup metadata
 - **Version-aware routing** with support for API versioning
+- **Startup guide diagnostics mode** with actionable hints for common startup failures
 - **Comprehensive error handling** with customizable filters
 - **Type-safe parameter binding** with transformation pipes
 - **Guard-based authorization** for protecting routes
@@ -61,7 +64,38 @@ const { app, hono } = await Application.create(AppModule)
 - **Hono integration** for high-performance request handling
 - **Extensible architecture** with plugin support
 - **Application context (registry)** for app and plugins to share pipeline data by key
+- **Testing harness utilities** for fast setup in unit/integration tests
 - **Comprehensive documentation** and examples
+
+## Testing utilities
+
+Core exports include lightweight testing helpers:
+
+- `createTestingModule(options)` - Create a dynamic module class for tests.
+- `createTestApplication(options)` - Start an app quickly and use `.request()` convenience helper.
+- `createControllerTestApplication(options)` - Bootstrap an app around a single controller.
+- `createServiceTestContainer(options)` - Use DI-only service testing with overrides and preload.
+
+These helpers are designed to reduce boilerplate while keeping test setup explicit.
+
+## Startup guide mode
+
+Set `startupGuide` in `Application.create()` options to emit structured startup hints when initialization fails:
+
+- `startupGuide: true` - concise, actionable hints
+- `startupGuide: { verbose: true }` - includes extra guided troubleshooting steps
+
+Guide hints cover common issues such as missing decorators, constructor metadata setup, strict no-routes startup, and
+plugin ordering/capability errors.
+
+## Plugin ordering and capability contracts
+
+Plugins support startup ordering and capability validation:
+
+- Entry-level ordering: `name`, `before`, `after`
+- Plugin metadata contracts: `meta.provides`, `meta.requires`
+
+This allows predictable startup sequencing and fast failure when required plugin capabilities are missing.
 
 ## Application context (registry)
 

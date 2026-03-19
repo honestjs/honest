@@ -93,8 +93,11 @@ for full docs.
 - **🏗️ Familiar architecture** — Decorator-based API inspired by NestJS; TypeScript-first.
 - **💉 Dependency injection** — Built-in DI container for clean, testable code and automatic wiring.
 - **🔌 Plugin system** — Extend the app with custom plugins, middleware, pipes, and filters.
+- **🧩 Plugin contracts** — Deterministic plugin ordering and startup capability validation.
 - **🛣️ Advanced routing** — Prefixes, API versioning, and nested route organization.
 - **🛡️ Request pipeline** — Middleware, guards, pipes, and filters at app, controller, or handler level.
+- **🧪 Lightweight testing harness** — Helpers for application, controller, and service-level tests.
+- **🧭 Startup guide mode** — Actionable diagnostics hints for startup failures.
 - **📝 TypeScript-first** — Strong typing and great IDE support out of the box.
 - **🖥️ MVC & SSR** — Full-stack apps with Hono JSX views; use the `mvc` template or the docs.
 
@@ -133,6 +136,7 @@ class AppController {
 class AppModule {}
 
 const { app, hono } = await Application.create(AppModule, {
+	startupGuide: { verbose: true },
 	debug: {
 		routes: true,
 		plugins: true,
@@ -159,7 +163,12 @@ const { app, hono } = await Application.create(AppModule, {
 		pipes: [ValidationPipe],
 		filters: [HttpExceptionFilter]
 	},
-	plugins: [new RPCPlugin(), new ApiDocsPlugin(), { plugin: MyPlugin, preProcessors: [pre], postProcessors: [post] }],
+	plugins: [
+		new RPCPlugin(),
+		new ApiDocsPlugin(),
+		{ plugin: MyPlugin, name: 'core', preProcessors: [pre], postProcessors: [post] },
+		{ plugin: MetricsPlugin, name: 'metrics', after: ['core'] }
+	],
 	onError: (err, c) => c.json({ error: err.message }, 500),
 	notFound: (c) => c.json({ error: 'Not found' }, 404)
 })
@@ -175,6 +184,76 @@ Controllers, services, and modules are wired by decorators; use **guards** for a
 Decorator metadata is still collected globally, but each application instance now runs on an immutable metadata snapshot
 captured during startup. This prevents metadata mutations made after bootstrap from changing behavior in already-running
 applications.
+
+## Plugin ordering and capability contracts
+
+Use named plugin entries when order matters and optionally declare startup capability contracts via `meta`.
+
+```typescript
+class ArtifactPlugin {
+	meta = {
+		name: 'artifact',
+		provides: ['artifact:routes']
+	}
+}
+
+class DocsPlugin {
+	meta = {
+		name: 'docs',
+		requires: ['artifact:routes']
+	}
+}
+
+await Application.create(AppModule, {
+	plugins: [
+		{ plugin: new DocsPlugin(), name: 'docs', after: ['artifact'] },
+		{ plugin: new ArtifactPlugin(), name: 'artifact' }
+	]
+})
+```
+
+If constraints are invalid (missing dependency, cycle, or missing required capability), startup fails fast.
+
+## Testing harness
+
+Honest exports lightweight helpers for common test setups.
+
+```typescript
+import { createTestApplication, createControllerTestApplication, createServiceTestContainer } from 'honestjs'
+
+const app = await createTestApplication({
+	controllers: [UsersController],
+	services: [UsersService]
+})
+
+const response = await app.request('/users')
+
+const controllerApp = await createControllerTestApplication({
+	controller: UsersController
+})
+
+const services = createServiceTestContainer({
+	preload: [UsersService],
+	overrides: [{ provide: UsersService, useValue: mockUsersService }]
+})
+```
+
+## Startup diagnostics guide mode
+
+Enable startup guidance to get actionable remediation hints when initialization fails.
+
+```typescript
+await Application.create(AppModule, {
+	startupGuide: true
+})
+
+await Application.create(AppModule, {
+	startupGuide: { verbose: true }
+})
+```
+
+Guide mode emits startup diagnostics hints for common issues such as missing decorators, strict no-routes startup,
+metadata issues, and plugin ordering/capability errors.
 
 ## License
 
