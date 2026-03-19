@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { Service } from '../decorators'
-import type { IServiceRegistry } from '../interfaces'
+import type { DiagnosticEvent, IDiagnosticsEmitter, IServiceRegistry } from '../interfaces'
 import { Container } from './container'
 
 describe('Container', () => {
@@ -94,5 +94,31 @@ describe('Container', () => {
 
 		const container = new Container(serviceRegistry)
 		expect(() => container.resolve(NeedsDep)).toThrow('constructor metadata is missing')
+	})
+
+	test('resolve() emits DI diagnostics when debug mode is enabled', () => {
+		class Dependency {}
+		class Consumer {
+			constructor(public readonly dependency: Dependency) {}
+		}
+		Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer)
+
+		const events: DiagnosticEvent[] = []
+		const diagnosticsEmitter: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		const container = new Container(undefined, diagnosticsEmitter, true)
+		container.resolve(Consumer)
+		container.resolve(Consumer)
+
+		expect(events.some((event) => event.category === 'di' && event.message.includes('Resolving Consumer'))).toBe(
+			true
+		)
+		expect(
+			events.some((event) => event.category === 'di' && event.message.includes('Resolved Consumer from DI cache'))
+		).toBe(true)
 	})
 })

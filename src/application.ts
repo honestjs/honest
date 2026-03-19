@@ -39,11 +39,17 @@ export class Application {
 	constructor(options: HonestOptions = {}) {
 		this.options = isObject(options) ? options : {}
 
+		const debugPipeline =
+			this.options.debug === true ||
+			(typeof this.options.debug === 'object' && Boolean(this.options.debug.pipeline))
+		const debugDi =
+			this.options.debug === true || (typeof this.options.debug === 'object' && Boolean(this.options.debug.di))
+
 		this.hono = new Hono(this.options.hono)
 
 		this.diagnosticsEmitter = this.options.diagnostics || new ConsoleDiagnosticsEmitter()
 
-		this.container = this.options.container || new Container()
+		this.container = this.options.container || new Container(undefined, this.diagnosticsEmitter, debugDi)
 
 		this.context = new ApplicationContext()
 
@@ -54,10 +60,6 @@ export class Application {
 		this.componentManager.setupGlobalComponents(this.options)
 
 		this.setupErrorHandlers()
-
-		const debugPipeline =
-			this.options.debug === true ||
-			(typeof this.options.debug === 'object' && Boolean(this.options.debug.pipeline))
 
 		this.routeManager = new RouteManager(
 			this.hono,
