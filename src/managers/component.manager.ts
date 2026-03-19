@@ -155,7 +155,7 @@ export class ComponentManager {
 		return this.resolvePipes(pipeItems as PipeType[])
 	}
 
-	async executePipes(value: unknown, metadata: ArgumentMetadata, pipes: IPipe[]): Promise<unknown> {
+	async executePipes(value: unknown, metadata: ArgumentMetadata, pipes: ReadonlyArray<IPipe>): Promise<unknown> {
 		let transformedValue = value
 
 		for (const pipe of pipes) {

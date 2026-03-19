@@ -22,7 +22,7 @@ export const Body = createParamDecorator('body', async (data, ctx) => {
  * @param data - The parameter name in the route
  */
 export const Param = createParamDecorator('param', (data, ctx) => {
-	return data ? ctx.req.param(data) : ctx.req.param()
+	return data ? ctx.req.param(String(data)) : ctx.req.param()
 })
 
 /**
@@ -30,7 +30,7 @@ export const Param = createParamDecorator('param', (data, ctx) => {
  * @param data - The query parameter name
  */
 export const Query = createParamDecorator('query', (data, ctx) => {
-	return data ? ctx.req.query(data) : ctx.req.query()
+	return data ? ctx.req.query(String(data)) : ctx.req.query()
 })
 
 /**
@@ -38,7 +38,7 @@ export const Query = createParamDecorator('query', (data, ctx) => {
  * @param data - The header name
  */
 export const Header = createParamDecorator('header', (data, ctx) => {
-	return data ? ctx.req.header(data) : ctx.req.header()
+	return data ? ctx.req.header(String(data)) : ctx.req.header()
 })
 
 /**
@@ -63,5 +63,9 @@ export const Context = createParamDecorator('context', (_, ctx) => ctx)
  * Decorator that binds a context variable to a parameter
  * @param data - The variable name to retrieve from context
  */
-export const Var = createParamDecorator('variable', (data, ctx) => ctx.get(data))
-export const Variable = createParamDecorator('variable', (data, ctx) => ctx.get(data))
+export const Var = createParamDecorator('variable', (data, ctx) =>
+	data === undefined ? undefined : ctx.get(String(data))
+)
+export const Variable = createParamDecorator('variable', (data, ctx) =>
+	data === undefined ? undefined : ctx.get(String(data))
+)

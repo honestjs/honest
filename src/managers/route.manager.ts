@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception'
 import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY, VERSION_NEUTRAL } from '../constants'
 import type { DiContainer, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
+import { ParameterResolver } from './parameter.resolver'
 import { MetadataRegistry } from '../registries'
 import { RouteRegistry } from '../registries/route.registry'
 import type { Constructor } from '../types'
@@ -19,6 +20,7 @@ export class RouteManager {
 	private container: DiContainer
 	private routeRegistry: RouteRegistry
 	private componentManager: ComponentManager
+	private parameterResolver: ParameterResolver
 	private globalPrefix?: string
 	private globalVersion?: number | typeof VERSION_NEUTRAL | number[]
 
@@ -33,6 +35,7 @@ export class RouteManager {
 		this.container = container
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
+		this.parameterResolver = new ParameterResolver(this.componentManager)
 		this.globalPrefix = options.prefix !== undefined ? this.normalizePath(options.prefix) : undefined
 		this.globalVersion = options.version
 
@@ -235,6 +238,7 @@ export class RouteManager {
 		})
 
 		const componentManager = this.componentManager
+		const parameterResolver = this.parameterResolver
 
 		const wrapperHandler = async (c: Context) => {
 			try {
@@ -252,30 +256,14 @@ export class RouteManager {
 					}
 				}
 
-				const maxDecoratorIndex = handlerParams.length > 0 ? Math.max(...handlerParams.map((p) => p.index)) : -1
-				const args: unknown[] = new Array(Math.max(handler.length, maxDecoratorIndex + 1))
-
-				for (const param of handlerParams) {
-					if (typeof param.factory !== 'function') {
-						throw new Error(
-							`Invalid parameter decorator metadata for ${controllerClass.name}.${String(handlerName)}`
-						)
-					}
-
-					const rawValue = await param.factory(param.data, c)
-
-					const transformedValue = await componentManager.executePipes(
-						rawValue,
-						{
-							type: param.name,
-							metatype: param.metatype,
-							data: param.data
-						},
-						handlerPipes
-					)
-
-					args[param.index] = transformedValue
-				}
+				const args = await parameterResolver.resolveArguments({
+					controllerName: controllerClass.name,
+					handlerName,
+					handlerArity: handler.length,
+					handlerParams,
+					handlerPipes,
+					context: c
+				})
 
 				const result = await handler(...args)
 
