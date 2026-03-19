@@ -50,10 +50,14 @@ export class Application {
 		this.routeRegistry = new RouteRegistry()
 		this.metadataRepository = new StaticMetadataRepository()
 
-		this.componentManager = new ComponentManager(this.container, this.metadataRepository)
+		this.componentManager = new ComponentManager(this.container, this.metadataRepository, this.diagnosticsEmitter)
 		this.componentManager.setupGlobalComponents(this.options)
 
 		this.setupErrorHandlers()
+
+		const debugPipeline =
+			this.options.debug === true ||
+			(typeof this.options.debug === 'object' && Boolean(this.options.debug.pipeline))
 
 		this.routeManager = new RouteManager(
 			this.hono,
@@ -61,9 +65,11 @@ export class Application {
 			this.routeRegistry,
 			this.componentManager,
 			this.metadataRepository,
+			this.diagnosticsEmitter,
 			{
 				prefix: this.options.routing?.prefix,
-				version: this.options.routing?.version
+				version: this.options.routing?.version,
+				debugPipeline
 			}
 		)
 

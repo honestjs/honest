@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { Application } from './application'
 import { Controller, Get, Module, UseFilters, UseGuards, UseMiddleware, UsePipes } from './decorators'
 import { createParamDecorator } from './helpers'
-import type { IFilter, IGuard, IMiddleware, IPipe } from './interfaces'
+import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard, IMiddleware, IPipe } from './interfaces'
 import type { Context, Next } from 'hono'
 
 const order: string[] = []
@@ -243,5 +243,42 @@ describe('Pipeline integration', () => {
 
 		await hono.request(new Request('http://localhost/levels'))
 		expect(levels).toEqual(['global', 'controller', 'handler'])
+	})
+
+	test('pipeline diagnostics emits event when guard rejects in debug mode', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		@Controller('/diag-reject')
+		@UseGuards(RejectingGuard)
+		class DiagnosticsRejectController {
+			@Get()
+			index() {
+				return { ok: true }
+			}
+		}
+
+		@Module({ controllers: [DiagnosticsRejectController] })
+		class DiagnosticsRejectModule {}
+
+		const { hono } = await Application.create(DiagnosticsRejectModule, {
+			debug: { pipeline: true },
+			diagnostics
+		})
+
+		const res = await hono.request(new Request('http://localhost/diag-reject'))
+		expect(res.status).toBe(403)
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'pipeline' &&
+					event.level === 'warn' &&
+					event.message.includes('Guard rejected request')
+			)
+		).toBe(true)
 	})
 })

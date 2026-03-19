@@ -1,7 +1,8 @@
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY } from '../constants'
-import type { ParameterMetadata } from '../interfaces'
+import { NoopDiagnosticsEmitter } from '../diagnostics'
+import type { IDiagnosticsEmitter, ParameterMetadata } from '../interfaces'
 import type { IPipe } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'
@@ -25,7 +26,9 @@ export class PipelineExecutor {
 	constructor(
 		private readonly componentManager: ComponentManager,
 		private readonly parameterResolver: ParameterResolver,
-		private readonly handlerInvoker: HandlerInvoker
+		private readonly handlerInvoker: HandlerInvoker,
+		private readonly diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter(),
+		private readonly debugPipeline = false
 	) {}
 
 	async execute(input: PipelineExecutionInput): Promise<unknown> {
@@ -39,6 +42,14 @@ export class PipelineExecutor {
 		for (const guard of guards) {
 			const canActivate = await guard.canActivate(context)
 			if (!canActivate) {
+				if (this.debugPipeline) {
+					this.diagnosticsEmitter.emit({
+						level: 'warn',
+						category: 'pipeline',
+						message: `Guard rejected request at ${controllerClass.name}.${String(handlerName)}`,
+						details: { guard: guard.constructor?.name || 'UnknownGuard' }
+					})
+				}
 				throw new HTTPException(403, {
 					message: `Forbidden by ${guard.constructor?.name || 'UnknownGuard'} at ${controllerClass.name}.${String(handlerName)}`
 				})
@@ -53,6 +64,19 @@ export class PipelineExecutor {
 			handlerPipes,
 			context
 		})
+
+		if (this.debugPipeline) {
+			this.diagnosticsEmitter.emit({
+				level: 'debug',
+				category: 'pipeline',
+				message: `Resolved handler arguments for ${controllerClass.name}.${String(handlerName)}`,
+				details: {
+					guardCount: guards.length,
+					parameterCount: handlerParams.length,
+					pipeCount: handlerPipes.length
+				}
+			})
+		}
 
 		return this.handlerInvoker.invoke({
 			handler,

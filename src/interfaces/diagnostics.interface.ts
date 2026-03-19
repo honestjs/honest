@@ -6,7 +6,7 @@ export type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error'
 /**
  * Diagnostic category used to filter or route events.
  */
-export type DiagnosticCategory = 'startup' | 'routes' | 'plugins' | 'deprecations' | 'errors'
+export type DiagnosticCategory = 'startup' | 'routes' | 'plugins' | 'deprecations' | 'pipeline' | 'di' | 'errors'
 
 /**
  * Structured diagnostic event emitted by Honest runtime components.

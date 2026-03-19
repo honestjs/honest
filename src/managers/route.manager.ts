@@ -1,6 +1,13 @@
 import type { Context, Hono } from 'hono'
 import { VERSION_NEUTRAL } from '../constants'
-import type { DiContainer, IMetadataRepository, ParameterMetadata, RouteDefinition } from '../interfaces'
+import { NoopDiagnosticsEmitter } from '../diagnostics'
+import type {
+	DiContainer,
+	IDiagnosticsEmitter,
+	IMetadataRepository,
+	ParameterMetadata,
+	RouteDefinition
+} from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'
 import { ParameterResolver } from './parameter.resolver'
@@ -24,6 +31,7 @@ export class RouteManager {
 	private parameterResolver: ParameterResolver
 	private pipelineExecutor: PipelineExecutor
 	private metadataRepository: IMetadataRepository
+	private diagnosticsEmitter: IDiagnosticsEmitter
 	private globalPrefix?: string
 	private globalVersion?: number | typeof VERSION_NEUTRAL | number[]
 
@@ -33,17 +41,25 @@ export class RouteManager {
 		routeRegistry: RouteRegistry,
 		componentManager: ComponentManager,
 		metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
-		options: { prefix?: string; version?: number | typeof VERSION_NEUTRAL | number[] } = {}
+		diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter(),
+		options: {
+			prefix?: string
+			version?: number | typeof VERSION_NEUTRAL | number[]
+			debugPipeline?: boolean
+		} = {}
 	) {
 		this.hono = hono
 		this.container = container
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
 		this.parameterResolver = new ParameterResolver(this.componentManager)
+		this.diagnosticsEmitter = diagnosticsEmitter
 		this.pipelineExecutor = new PipelineExecutor(
 			this.componentManager,
 			this.parameterResolver,
-			new HandlerInvoker()
+			new HandlerInvoker(),
+			this.diagnosticsEmitter,
+			Boolean(options.debugPipeline)
 		)
 		this.metadataRepository = metadataRepository
 		this.globalPrefix = options.prefix !== undefined ? this.normalizePath(options.prefix) : undefined
