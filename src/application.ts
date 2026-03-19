@@ -134,78 +134,112 @@ export class Application {
 		rootModule: Constructor,
 		options: HonestOptions = {}
 	): Promise<{ app: Application; hono: Hono }> {
+		const startupStartedAt = Date.now()
 		const app = new Application(options)
 		const entries = (options.plugins || []).map((entry) => app.normalizePluginEntry(entry))
 		const ctx = app.getContext()
 		const debug = options.debug
 		const debugPlugins = debug === true || (typeof debug === 'object' && debug.plugins)
 		const debugRoutes = debug === true || (typeof debug === 'object' && debug.routes)
-		const debugStartup = debug === true || debugRoutes
+		const debugStartup = debug === true || (typeof debug === 'object' && (debug.startup || debugRoutes))
+		let strictNoRoutesFailureEmitted = false
 
-		if (debugPlugins && entries.length > 0) {
-			app.diagnosticsEmitter.emit({
-				level: 'info',
-				category: 'plugins',
-				message: `Plugin order: ${entries.map(({ plugin }) => plugin.constructor?.name || 'AnonymousPlugin').join(' -> ')}`
-			})
-		}
-
-		for (const { plugin, preProcessors } of entries) {
-			for (const fn of preProcessors) {
-				await fn(app, app.hono, ctx)
+		try {
+			if (debugPlugins && entries.length > 0) {
+				app.diagnosticsEmitter.emit({
+					level: 'info',
+					category: 'plugins',
+					message: `Plugin order: ${entries.map(({ plugin }) => plugin.constructor?.name || 'AnonymousPlugin').join(' -> ')}`
+				})
 			}
-			if (plugin.beforeModulesRegistered) {
-				await plugin.beforeModulesRegistered(app, app.hono)
-			}
-		}
 
-		await app.register(rootModule)
-
-		const routes = app.getRoutes()
-		if (debugStartup) {
-			app.diagnosticsEmitter.emit({
-				level: 'info',
-				category: 'startup',
-				message: `Application registered ${routes.length} route(s)`,
-				details: {
-					routeCount: routes.length,
-					rootModule: rootModule.name
+			for (const { plugin, preProcessors } of entries) {
+				for (const fn of preProcessors) {
+					await fn(app, app.hono, ctx)
 				}
-			})
-		}
-		if (options.strict?.requireRoutes && routes.length === 0) {
-			app.diagnosticsEmitter.emit({
-				level: 'error',
-				category: 'startup',
-				message: 'Strict mode failed: no routes were registered',
-				details: {
-					rootModule: rootModule.name,
-					requireRoutes: true
+				if (plugin.beforeModulesRegistered) {
+					await plugin.beforeModulesRegistered(app, app.hono)
 				}
-			})
-			throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
-		}
-		if (debugRoutes) {
-			app.diagnosticsEmitter.emit({
-				level: 'info',
-				category: 'routes',
-				message: 'Registered routes',
-				details: {
-					routes: routes.map((route) => `${route.method.toUpperCase()} ${route.fullPath}`)
+			}
+
+			await app.register(rootModule)
+
+			const routes = app.getRoutes()
+			if (debugStartup) {
+				app.diagnosticsEmitter.emit({
+					level: 'info',
+					category: 'startup',
+					message: `Application registered ${routes.length} route(s)`,
+					details: {
+						routeCount: routes.length,
+						rootModule: rootModule.name
+					}
+				})
+			}
+			if (options.strict?.requireRoutes && routes.length === 0) {
+				strictNoRoutesFailureEmitted = true
+				app.diagnosticsEmitter.emit({
+					level: 'error',
+					category: 'startup',
+					message: 'Strict mode failed: no routes were registered',
+					details: {
+						rootModule: rootModule.name,
+						requireRoutes: true,
+						startupDurationMs: Date.now() - startupStartedAt
+					}
+				})
+				throw new Error('Strict mode: no routes were registered. Check your module/controller decorators.')
+			}
+			if (debugRoutes) {
+				app.diagnosticsEmitter.emit({
+					level: 'info',
+					category: 'routes',
+					message: 'Registered routes',
+					details: {
+						routes: routes.map((route) => `${route.method.toUpperCase()} ${route.fullPath}`)
+					}
+				})
+			}
+
+			for (const { plugin, postProcessors } of entries) {
+				if (plugin.afterModulesRegistered) {
+					await plugin.afterModulesRegistered(app, app.hono)
 				}
-			})
-		}
-
-		for (const { plugin, postProcessors } of entries) {
-			if (plugin.afterModulesRegistered) {
-				await plugin.afterModulesRegistered(app, app.hono)
+				for (const fn of postProcessors) {
+					await fn(app, app.hono, ctx)
+				}
 			}
-			for (const fn of postProcessors) {
-				await fn(app, app.hono, ctx)
-			}
-		}
 
-		return { app, hono: app.getApp() }
+			if (debugStartup) {
+				app.diagnosticsEmitter.emit({
+					level: 'info',
+					category: 'startup',
+					message: 'Application startup completed',
+					details: {
+						rootModule: rootModule.name,
+						pluginCount: entries.length,
+						routeCount: routes.length,
+						startupDurationMs: Date.now() - startupStartedAt
+					}
+				})
+			}
+
+			return { app, hono: app.getApp() }
+		} catch (error: unknown) {
+			if (debugStartup && !strictNoRoutesFailureEmitted) {
+				app.diagnosticsEmitter.emit({
+					level: 'error',
+					category: 'startup',
+					message: 'Application startup failed',
+					details: {
+						rootModule: rootModule.name,
+						startupDurationMs: Date.now() - startupStartedAt,
+						errorMessage: error instanceof Error ? error.message : String(error)
+					}
+				})
+			}
+			throw error
+		}
 	}
 
 	getApp(): Hono {

@@ -311,6 +311,75 @@ describe('Application', () => {
 		).toBe(true)
 	})
 
+	test('startup diagnostics includes completion event with timing details', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await Application.create(TestModule, {
+			debug: true,
+			diagnostics
+		})
+
+		const startupCompleted = events.find(
+			(event) =>
+				event.category === 'startup' &&
+				event.level === 'info' &&
+				event.message === 'Application startup completed'
+		)
+
+		expect(startupCompleted).toBeDefined()
+		expect(
+			Number((startupCompleted?.details as Record<string, unknown>)?.startupDurationMs)
+		).toBeGreaterThanOrEqual(0)
+		expect(Number((startupCompleted?.details as Record<string, unknown>)?.routeCount)).toBeGreaterThanOrEqual(1)
+	})
+
+	test('debug.startup enables startup diagnostics independently from debug.routes', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await Application.create(TestModule, {
+			debug: { startup: true, routes: false },
+			diagnostics
+		})
+
+		expect(events.some((event) => event.category === 'startup')).toBe(true)
+		expect(events.some((event) => event.category === 'routes')).toBe(false)
+	})
+
+	test('startup diagnostics emits generic startup failure event in debug mode', async () => {
+		const events: DiagnosticEvent[] = []
+		const diagnostics: IDiagnosticsEmitter = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+
+		await expect(Application.create(BrokenControllerModule, { debug: true, diagnostics })).rejects.toThrow(
+			'is not decorated with @Controller()'
+		)
+
+		expect(
+			events.some(
+				(event) =>
+					event.category === 'startup' &&
+					event.level === 'error' &&
+					event.message === 'Application startup failed' &&
+					String((event.details as Record<string, unknown>)?.errorMessage || '').includes(
+						'is not decorated with @Controller()'
+					)
+			)
+		).toBe(true)
+	})
+
 	test('fails startup on duplicate method/path routes', async () => {
 		await expect(Application.create(DuplicateRoutesModule)).rejects.toThrow('Duplicate route detected')
 	})

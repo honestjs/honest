@@ -12,7 +12,7 @@ export interface HonestOptions {
 	 * - `true` enables all debug logs
 	 * - object form enables specific categories
 	 */
-	debug?: boolean | { routes?: boolean; plugins?: boolean; pipeline?: boolean; di?: boolean }
+	debug?: boolean | { routes?: boolean; plugins?: boolean; pipeline?: boolean; di?: boolean; startup?: boolean }
 
 	/**
 	 * Optional diagnostics emitter for structured framework events.
