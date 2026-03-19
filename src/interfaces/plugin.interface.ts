@@ -10,11 +10,44 @@ import type { Constructor } from '../types'
 export type PluginProcessor = (app: Application, hono: Hono, ctx: IApplicationContext) => void | Promise<void>
 
 /**
+ * Optional metadata for plugin composition and startup contract checks.
+ */
+export interface PluginMeta {
+	/**
+	 * Stable plugin name used for ordering constraints and diagnostics.
+	 */
+	name?: string
+
+	/**
+	 * Capabilities this plugin provides for subsequent plugins.
+	 */
+	provides?: string[]
+
+	/**
+	 * Capabilities this plugin expects to be provided earlier in the pipeline.
+	 */
+	requires?: string[]
+}
+
+/**
  * Object form of a plugin entry with optional pre/post processors.
  * Processors run before (pre) or after (post) the plugin's lifecycle hooks.
  */
 export interface PluginEntryObject {
 	plugin: IPlugin | Constructor<IPlugin>
+	/**
+	 * Optional stable plugin name used for ordering and diagnostics.
+	 * Takes precedence over plugin.meta.name.
+	 */
+	name?: string
+	/**
+	 * Ensure this plugin runs before listed plugin names.
+	 */
+	before?: string[]
+	/**
+	 * Ensure this plugin runs after listed plugin names.
+	 */
+	after?: string[]
 	preProcessors?: PluginProcessor[]
 	postProcessors?: PluginProcessor[]
 }
@@ -25,6 +58,11 @@ export interface PluginEntryObject {
  * different stages of the application lifecycle
  */
 export interface IPlugin {
+	/**
+	 * Optional metadata for plugin capabilities and diagnostics.
+	 */
+	meta?: PluginMeta
+
 	/**
 	 * Hook that runs before module registration begins
 	 * Use this to set up plugin functionality that modules might depend on
