@@ -17,10 +17,10 @@ export async function createTestApplication(options: CreateTestApplicationOption
 				input.startsWith('http://') || input.startsWith('https://')
 					? input
 					: `http://localhost${input.startsWith('/') ? input : `/${input}`}`
-			return hono.request(normalizedInput, init)
+			return Promise.resolve(hono.request(normalizedInput, init))
 		}
 
-		return hono.request(input)
+		return Promise.resolve(hono.request(input))
 	}
 
 	return { app, hono, request }
