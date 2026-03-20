@@ -2,10 +2,10 @@ import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { Application } from './application'
 import { Body, Controller, Get, Module, Post, Service, UseFilters } from './decorators'
-import { Container } from './di/container'
 import { createParamDecorator } from './helpers'
 import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard } from './interfaces'
 import { MetadataRegistry } from './registries'
+import { createControllerTestApplication, createServiceTestContainer, createTestApplication } from './testing'
 
 @Controller('/health')
 class TestController {
@@ -15,9 +15,6 @@ class TestController {
 	}
 }
 
-@Module({ controllers: [TestController] })
-class TestModule {}
-
 @Controller('/payload')
 class PayloadController {
 	@Post('echo')
@@ -25,9 +22,6 @@ class PayloadController {
 		return { a, b }
 	}
 }
-
-@Module({ controllers: [PayloadController] })
-class PayloadModule {}
 
 @Controller('/raw')
 class RawResponseController {
@@ -40,9 +34,6 @@ class RawResponseController {
 	}
 }
 
-@Module({ controllers: [RawResponseController] })
-class RawResponseModule {}
-
 @Controller('/only-a')
 class OnlyAController {
 	@Get()
@@ -51,9 +42,6 @@ class OnlyAController {
 	}
 }
 
-@Module({ controllers: [OnlyAController] })
-class OnlyAModule {}
-
 @Controller('/only-b')
 class OnlyBController {
 	@Get()
@@ -61,9 +49,6 @@ class OnlyBController {
 		return { app: 'b' }
 	}
 }
-
-@Module({ controllers: [OnlyBController] })
-class OnlyBModule {}
 
 class UndecoratedController {
 	hello() {
@@ -93,9 +78,6 @@ class DuplicateBController {
 	}
 }
 
-@Module({ controllers: [DuplicateAController, DuplicateBController] })
-class DuplicateRoutesModule {}
-
 const UnsafeParam = createParamDecorator('unsafe')
 
 @Controller('/unsafe')
@@ -105,9 +87,6 @@ class UnsafeParamController {
 		return { hasValue: value !== undefined }
 	}
 }
-
-@Module({ controllers: [UnsafeParamController] })
-class UnsafeParamModule {}
 
 @Controller('/diag-a')
 class DiagnosticsAController {
@@ -125,9 +104,6 @@ class DiagnosticsBController {
 	}
 }
 
-@Module({ controllers: [DiagnosticsAController, DiagnosticsBController] })
-class DiagnosticsRoutesModule {}
-
 @Controller('/runtime-metadata')
 class RuntimeMetadataController {
 	@Get()
@@ -136,30 +112,30 @@ class RuntimeMetadataController {
 	}
 }
 
-@Module({ controllers: [RuntimeMetadataController] })
-class RuntimeMetadataModule {}
-
 describe('Application', () => {
 	test('create() registers module and getRoutes() returns expected route', async () => {
-		const { app, hono } = await Application.create(TestModule)
+		const testApp = await createControllerTestApplication({
+			controller: TestController
+		})
 
-		const routes = app.getRoutes()
+		const routes = testApp.app.getRoutes()
 		expect(routes.length).toBeGreaterThanOrEqual(1)
 		const getRoute = routes.find((r) => r.method.toUpperCase() === 'GET' && r.fullPath.includes('health'))
 		expect(getRoute).toBeDefined()
 		expect(getRoute!.method.toUpperCase()).toBe('GET')
 
-		const path = getRoute!.fullPath
-		const res = await hono.request(new Request(`http://localhost${path}`))
+		const res = await testApp.request(getRoute!.fullPath)
 		expect(res.status).toBe(200)
 		const body = await res.json()
 		expect(body).toEqual({ ok: true })
 	})
 
 	test('getContext() returns same instance and supports set/get', async () => {
-		const { app } = await Application.create(TestModule)
-		const ctx = app.getContext()
-		expect(ctx).toBe(app.getContext())
+		const testApp = await createControllerTestApplication({
+			controller: TestController
+		})
+		const ctx = testApp.app.getContext()
+		expect(ctx).toBe(testApp.app.getContext())
 
 		ctx.set('test.key', { value: 123 })
 		expect(ctx.get<{ value: number }>('test.key')).toEqual({ value: 123 })
@@ -183,14 +159,14 @@ describe('Application', () => {
 			}
 		}
 
-		@Module({ controllers: [GreetController], services: [GreetService] })
-		class GreetModule {}
-
-		const { app } = await Application.create(GreetModule)
-		const container = app.getContainer()
+		const testApp = await createControllerTestApplication({
+			controller: GreetController,
+			services: [GreetService]
+		})
+		const container = testApp.app.getContainer()
 
 		expect(container).toBeDefined()
-		expect(container).toBe(app.getContainer())
+		expect(container).toBe(testApp.app.getContainer())
 
 		const svc = container.resolve(GreetService)
 		expect(svc.greet('test')).toBe('Hello, test')
@@ -206,7 +182,10 @@ describe('Application', () => {
 				order.push('after')
 			}
 		}
-		await Application.create(TestModule, { plugins: [TestPlugin] })
+		await createControllerTestApplication({
+			controller: TestController,
+			appOptions: { plugins: [TestPlugin] }
+		})
 		expect(order).toEqual(['before', 'after'])
 	})
 
@@ -231,14 +210,17 @@ describe('Application', () => {
 			order.push('post1')
 			expect(ctx.get('plugin.order')).toBe('pre1')
 		}
-		await Application.create(TestModule, {
-			plugins: [
-				{
-					plugin: TestPlugin,
-					preProcessors: [pre1, pre2],
-					postProcessors: [post1]
-				}
-			]
+		await createControllerTestApplication({
+			controller: TestController,
+			appOptions: {
+				plugins: [
+					{
+						plugin: TestPlugin,
+						preProcessors: [pre1, pre2],
+						postProcessors: [post1]
+					}
+				]
+			}
 		})
 		expect(order).toEqual(['pre1', 'pre2', 'before', 'after', 'post1'])
 	})
@@ -264,11 +246,14 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(EmptyModule, {
-			plugins: [
-				{ plugin: MetricsPlugin, name: 'metrics', after: ['config'] },
-				{ plugin: ConfigPlugin, name: 'config' }
-			]
+		await createTestApplication({
+			module: EmptyModule,
+			appOptions: {
+				plugins: [
+					{ plugin: MetricsPlugin, name: 'metrics', after: ['config'] },
+					{ plugin: ConfigPlugin, name: 'config' }
+				]
+			}
 		})
 
 		expect(order).toEqual(['config:before', 'metrics:before', 'config:after', 'metrics:after'])
@@ -276,8 +261,11 @@ describe('Application', () => {
 
 	test('plugin ordering fails fast when constraints reference unknown plugin', async () => {
 		await expect(
-			Application.create(EmptyModule, {
-				plugins: [{ plugin: {}, name: 'metrics', after: ['config'] }]
+			createTestApplication({
+				module: EmptyModule,
+				appOptions: {
+					plugins: [{ plugin: {}, name: 'metrics', after: ['config'] }]
+				}
 			})
 		).rejects.toThrow("declares after 'config'")
 	})
@@ -299,11 +287,14 @@ describe('Application', () => {
 		}
 
 		await expect(
-			Application.create(EmptyModule, {
-				plugins: [
-					{ plugin: docsPlugin, name: 'docs', after: ['artifact'] },
-					{ plugin: artifactPlugin, name: 'artifact' }
-				]
+			createTestApplication({
+				module: EmptyModule,
+				appOptions: {
+					plugins: [
+						{ plugin: docsPlugin, name: 'docs', after: ['artifact'] },
+						{ plugin: artifactPlugin, name: 'artifact' }
+					]
+				}
 			})
 		).resolves.toBeDefined()
 	})
@@ -317,15 +308,20 @@ describe('Application', () => {
 		}
 
 		await expect(
-			Application.create(EmptyModule, {
-				plugins: [{ plugin: docsPlugin, name: 'docs' }]
+			createTestApplication({
+				module: EmptyModule,
+				appOptions: {
+					plugins: [{ plugin: docsPlugin, name: 'docs' }]
+				}
 			})
 		).rejects.toThrow("requires 'artifact:routes'")
 	})
 
 	test('@Body() values are readable multiple times in one handler', async () => {
-		const { hono } = await Application.create(PayloadModule)
-		const res = await hono.request(
+		const testApp = await createControllerTestApplication({
+			controller: PayloadController
+		})
+		const res = await testApp.request(
 			new Request('http://localhost/payload/echo', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
@@ -338,8 +334,10 @@ describe('Application', () => {
 	})
 
 	test('handlers can return native Response without @Ctx()', async () => {
-		const { hono } = await Application.create(RawResponseModule)
-		const res = await hono.request(new Request('http://localhost/raw'))
+		const testApp = await createControllerTestApplication({
+			controller: RawResponseController
+		})
+		const res = await testApp.request('/raw')
 
 		expect(res.status).toBe(201)
 		expect(res.headers.get('x-honest')).toBe('yes')
@@ -347,24 +345,28 @@ describe('Application', () => {
 	})
 
 	test('each app has isolated routes (no leaking between apps)', async () => {
-		const { app: appA } = await Application.create(OnlyAModule)
-		expect(appA.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(true)
+		const appA = await createControllerTestApplication({ controller: OnlyAController })
+		expect(appA.app.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(true)
 
-		const { app: appB } = await Application.create(OnlyBModule)
-		expect(appB.getRoutes().some((route) => route.fullPath.includes('/only-b'))).toBe(true)
-		expect(appB.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(false)
+		const appB = await createControllerTestApplication({ controller: OnlyBController })
+		expect(appB.app.getRoutes().some((route) => route.fullPath.includes('/only-b'))).toBe(true)
+		expect(appB.app.getRoutes().some((route) => route.fullPath.includes('/only-a'))).toBe(false)
 	})
 
 	test('custom param decorator without factory uses safe fallback', async () => {
-		const { hono } = await Application.create(UnsafeParamModule)
-		const res = await hono.request(new Request('http://localhost/unsafe'))
+		const testApp = await createControllerTestApplication({
+			controller: UnsafeParamController
+		})
+		const res = await testApp.request('/unsafe')
 
 		expect(res.status).toBe(200)
 		expect(await res.json()).toEqual({ hasValue: true })
 	})
 
 	test('fails with clear message for controllers missing @Controller()', async () => {
-		await expect(Application.create(BrokenControllerModule)).rejects.toThrow('is not decorated with @Controller()')
+		await expect(createTestApplication({ controllers: [UndecoratedController] })).rejects.toThrow(
+			'is not decorated with @Controller()'
+		)
 	})
 
 	test('strict.requireRoutes fails startup when no routes are registered', async () => {
@@ -381,9 +383,12 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(TestModule, {
-			debug: true,
-			diagnostics
+		await createControllerTestApplication({
+			controller: TestController,
+			appOptions: {
+				debug: true,
+				diagnostics
+			}
 		})
 
 		expect(
@@ -430,9 +435,12 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(TestModule, {
-			debug: true,
-			diagnostics
+		await createControllerTestApplication({
+			controller: TestController,
+			appOptions: {
+				debug: true,
+				diagnostics
+			}
 		})
 
 		const startupCompleted = events.find(
@@ -457,9 +465,12 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(TestModule, {
-			debug: { startup: true, routes: false },
-			diagnostics
+		await createControllerTestApplication({
+			controller: TestController,
+			appOptions: {
+				debug: { startup: true, routes: false },
+				diagnostics
+			}
 		})
 
 		expect(events.some((event) => event.category === 'startup')).toBe(true)
@@ -558,9 +569,12 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(DiagnosticsRoutesModule, {
-			debug: { routes: true, startup: false },
-			diagnostics
+		await createTestApplication({
+			controllers: [DiagnosticsAController, DiagnosticsBController],
+			appOptions: {
+				debug: { routes: true, startup: false },
+				diagnostics
+			}
 		})
 
 		const controllerEvents = events.filter(
@@ -612,7 +626,9 @@ describe('Application', () => {
 	})
 
 	test('metadata changes after app creation do not affect running app behavior', async () => {
-		const { hono } = await Application.create(RuntimeMetadataModule)
+		const testApp = await createControllerTestApplication({
+			controller: RuntimeMetadataController
+		})
 
 		const InjectedFilter: IFilter = {
 			catch(_exception: Error, context: any): Response {
@@ -622,7 +638,7 @@ describe('Application', () => {
 
 		MetadataRegistry.registerHandler('filter', 'RuntimeMetadataController:index', InjectedFilter)
 
-		const res = await hono.request(new Request('http://localhost/runtime-metadata'))
+		const res = await testApp.request('/runtime-metadata')
 		expect(res.status).toBe(500)
 		const body = await res.json()
 		expect(body.message).toContain('runtime metadata baseline error')
@@ -630,7 +646,9 @@ describe('Application', () => {
 	})
 
 	test('fails startup on duplicate method/path routes', async () => {
-		await expect(Application.create(DuplicateRoutesModule)).rejects.toThrow('Duplicate route detected')
+		await expect(
+			createTestApplication({ controllers: [DuplicateAController, DuplicateBController] })
+		).rejects.toThrow('Duplicate route detected')
 	})
 
 	// --- Phase 1 bug fix tests ---
@@ -644,15 +662,16 @@ describe('Application', () => {
 			}
 		}
 
-		await Application.create(OnlyAModule, {
-			components: { guards: [LeakyGuard] }
+		await createControllerTestApplication({
+			controller: OnlyAController,
+			appOptions: { components: { guards: [LeakyGuard] } }
 		})
 
 		expect(guardCalled).toBe(false)
 		guardCalled = false
 
-		const { hono } = await Application.create(OnlyBModule)
-		const res = await hono.request(new Request('http://localhost/only-b'))
+		const testApp = await createControllerTestApplication({ controller: OnlyBController })
+		const res = await testApp.request('/only-b')
 
 		expect(guardCalled).toBe(false)
 		expect(res.status).toBe(200)
@@ -722,11 +741,10 @@ describe('Application', () => {
 			}
 		}
 
-		@Module({ controllers: [FilterErrorController] })
-		class FilterErrorModule {}
-
-		const { hono } = await Application.create(FilterErrorModule)
-		const res = await hono.request(new Request('http://localhost/filter-err'))
+		const testApp = await createControllerTestApplication({
+			controller: FilterErrorController
+		})
+		const res = await testApp.request('/filter-err')
 
 		expect(res.status).toBe(500)
 		const body = await res.json()
@@ -740,43 +758,43 @@ describe('Application', () => {
 			constructor(public dep: TestController) {}
 		}
 
-		const container = new Container()
-		expect(() => container.resolve(NotAService)).toThrow('not decorated with @Service()')
+		const harness = createServiceTestContainer()
+		expect(() => harness.get(NotAService)).toThrow('not decorated with @Service()')
 	})
 
 	test('container.has() returns false for unresolved and true after resolve', async () => {
-		const container = new Container()
-		expect(container.has(TestController)).toBe(false)
+		const harness = createServiceTestContainer()
+		expect(harness.has(TestController)).toBe(false)
 
-		container.resolve(TestController)
-		expect(container.has(TestController)).toBe(true)
+		harness.get(TestController)
+		expect(harness.has(TestController)).toBe(true)
 	})
 
 	test('container.clear() removes all cached instances', () => {
-		const container = new Container()
-		container.resolve(TestController)
-		expect(container.has(TestController)).toBe(true)
+		const harness = createServiceTestContainer()
+		harness.get(TestController)
+		expect(harness.has(TestController)).toBe(true)
 
-		container.clear()
-		expect(container.has(TestController)).toBe(false)
+		harness.clear()
+		expect(harness.has(TestController)).toBe(false)
 	})
 
 	// --- Phase 4 architecture tests ---
 
 	test('two apps created in sequence have fully isolated routes', async () => {
-		const { app: appA, hono: honoA } = await Application.create(OnlyAModule)
-		const { app: appB, hono: honoB } = await Application.create(OnlyBModule)
+		const appA = await createControllerTestApplication({ controller: OnlyAController })
+		const appB = await createControllerTestApplication({ controller: OnlyBController })
 
-		expect(appA.getRoutes().length).toBe(1)
-		expect(appB.getRoutes().length).toBe(1)
-		expect(appA.getRoutes()[0].fullPath).toContain('/only-a')
-		expect(appB.getRoutes()[0].fullPath).toContain('/only-b')
+		expect(appA.app.getRoutes().length).toBe(1)
+		expect(appB.app.getRoutes().length).toBe(1)
+		expect(appA.app.getRoutes()[0].fullPath).toContain('/only-a')
+		expect(appB.app.getRoutes()[0].fullPath).toContain('/only-b')
 
-		const resA = await honoA.request(new Request('http://localhost/only-a'))
+		const resA = await appA.request('/only-a')
 		expect(resA.status).toBe(200)
 		expect(await resA.json()).toEqual({ app: 'a' })
 
-		const resB = await honoB.request(new Request('http://localhost/only-b'))
+		const resB = await appB.request('/only-b')
 		expect(resB.status).toBe(200)
 		expect(await resB.json()).toEqual({ app: 'b' })
 	})
@@ -798,18 +816,16 @@ describe('Application', () => {
 			}
 		}
 
-		@Module({ controllers: [ErrController] })
-		class ErrModule {}
-
-		const { hono: hono1 } = await Application.create(ErrModule, {
-			components: { filters: [CountingFilter] }
+		const app1 = await createControllerTestApplication({
+			controller: ErrController,
+			appOptions: { components: { filters: [CountingFilter] } }
 		})
-		await hono1.request(new Request('http://localhost/err'))
+		await app1.request('/err')
 		expect(filterHitCount).toBe(1)
 
 		filterHitCount = 0
-		const { hono: hono2 } = await Application.create(ErrModule)
-		const res = await hono2.request(new Request('http://localhost/err'))
+		const app2 = await createControllerTestApplication({ controller: ErrController })
+		const res = await app2.request('/err')
 		expect(filterHitCount).toBe(0)
 		expect(res.status).toBe(500)
 	})
@@ -830,16 +846,19 @@ describe('Application', () => {
 			}
 		}
 
-		@Module({ controllers: [CounterController], services: [CounterService] })
-		class CounterModule {}
-
-		const { hono: hono1 } = await Application.create(CounterModule)
-		await hono1.request(new Request('http://localhost/counter'))
-		const res1 = await hono1.request(new Request('http://localhost/counter'))
+		const app1 = await createControllerTestApplication({
+			controller: CounterController,
+			services: [CounterService]
+		})
+		await app1.request('/counter')
+		const res1 = await app1.request('/counter')
 		expect((await res1.json()).count).toBe(2)
 
-		const { hono: hono2 } = await Application.create(CounterModule)
-		const res2 = await hono2.request(new Request('http://localhost/counter'))
+		const app2 = await createControllerTestApplication({
+			controller: CounterController,
+			services: [CounterService]
+		})
+		const res2 = await app2.request('/counter')
 		expect((await res2.json()).count).toBe(1)
 	})
 })

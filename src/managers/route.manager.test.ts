@@ -1,9 +1,9 @@
 import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { MetadataRegistry } from '../registries'
-import { Controller, Get, Post, Module } from '../decorators'
+import { Controller, Get, Post } from '../decorators'
 import { VERSION_NEUTRAL } from '../constants'
-import { Application } from '../application'
+import { createTestApplication } from '../testing'
 
 afterEach(() => {
 	MetadataRegistry.clear()
@@ -20,11 +20,12 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [UsersCtrl] })
-			class AppMod {}
+			const testApp = await createTestApplication({
+				controllers: [UsersCtrl],
+				appOptions: { routing: { prefix: '/api' } }
+			})
 
-			const { hono } = await Application.create(AppMod, { routing: { prefix: '/api' } })
-			const res = await hono.request(new Request('http://localhost/api/users'))
+			const res = await testApp.request('/api/users')
 			expect(res.status).toBe(200)
 		})
 	})
@@ -39,11 +40,12 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [ItemsCtrl] })
-			class AppMod {}
+			const testApp = await createTestApplication({
+				controllers: [ItemsCtrl],
+				appOptions: { routing: { version: 1 } }
+			})
 
-			const { hono } = await Application.create(AppMod, { routing: { version: 1 } })
-			const res = await hono.request(new Request('http://localhost/v1/items'))
+			const res = await testApp.request('/v1/items')
 			expect(res.status).toBe(200)
 		})
 
@@ -56,11 +58,12 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [NeutralCtrl] })
-			class AppMod {}
+			const testApp = await createTestApplication({
+				controllers: [NeutralCtrl],
+				appOptions: { routing: { version: VERSION_NEUTRAL } }
+			})
 
-			const { hono } = await Application.create(AppMod, { routing: { version: VERSION_NEUTRAL } })
-			const res = await hono.request(new Request('http://localhost/neutral'))
+			const res = await testApp.request('/neutral')
 			expect(res.status).toBe(200)
 		})
 
@@ -73,11 +76,12 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [OverrideCtrl] })
-			class AppMod {}
+			const testApp = await createTestApplication({
+				controllers: [OverrideCtrl],
+				appOptions: { routing: { version: 1 } }
+			})
 
-			const { hono } = await Application.create(AppMod, { routing: { version: 1 } })
-			const res = await hono.request(new Request('http://localhost/v2/override'))
+			const res = await testApp.request('/v2/override')
 			expect(res.status).toBe(200)
 		})
 	})
@@ -90,20 +94,16 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [BadCtrl] })
-			class AppMod {}
-
-			await expect(Application.create(AppMod)).rejects.toThrow('not decorated with @Controller()')
+			await expect(createTestApplication({ controllers: [BadCtrl] })).rejects.toThrow(
+				'not decorated with @Controller()'
+			)
 		})
 
 		test('controller with no routes throws', async () => {
 			@Controller('/empty')
 			class EmptyCtrl {}
 
-			@Module({ controllers: [EmptyCtrl] })
-			class AppMod {}
-
-			await expect(Application.create(AppMod)).rejects.toThrow('has no route handlers')
+			await expect(createTestApplication({ controllers: [EmptyCtrl] })).rejects.toThrow('has no route handlers')
 		})
 	})
 
@@ -122,15 +122,12 @@ describe('RouteManager', () => {
 				}
 			}
 
-			@Module({ controllers: [CatsCtrl] })
-			class AppMod {}
-
-			const { hono, app } = await Application.create(AppMod)
-			const routes = app.getRoutes()
+			const testApp = await createTestApplication({ controllers: [CatsCtrl] })
+			const routes = testApp.app.getRoutes()
 			expect(routes.some((r) => r.fullPath === '/cats/all' && r.method === 'get')).toBe(true)
 			expect(routes.some((r) => r.fullPath === '/cats' && r.method === 'post')).toBe(true)
 
-			const res = await hono.request(new Request('http://localhost/cats/all'))
+			const res = await testApp.request('/cats/all')
 			expect(res.status).toBe(200)
 		})
 	})
