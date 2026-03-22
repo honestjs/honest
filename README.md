@@ -166,7 +166,12 @@ const { app, hono } = await Application.create(AppModule, {
 	plugins: [
 		new RPCPlugin(),
 		new ApiDocsPlugin(),
-		{ plugin: MyPlugin, name: 'core', preProcessors: [pre], postProcessors: [post] },
+		{
+			plugin: MyPlugin,
+			name: 'core',
+			preProcessors: [pre],
+			postProcessors: [post]
+		},
 		{ plugin: MetricsPlugin, name: 'metrics', after: ['core'] }
 	],
 	onError: (err, c) => c.json({ error: err.message }, 500),
@@ -219,7 +224,7 @@ If constraints are invalid (missing dependency, cycle, or missing required capab
 Honest exports lightweight helpers for common test setups.
 
 ```typescript
-import { createTestApplication, createControllerTestApplication, createServiceTestContainer } from 'honestjs'
+import { createControllerTestApplication, createServiceTestContainer, createTestApplication } from 'honestjs'
 
 const app = await createTestApplication({
 	controllers: [UsersController],
@@ -237,6 +242,22 @@ const services = createServiceTestContainer({
 	overrides: [{ provide: UsersService, useValue: mockUsersService }]
 })
 ```
+
+### Running tests in this package
+
+This repo uses [Bun's test runner](https://bun.sh/docs/cli/test). From the package root:
+
+- `bun test` — run all tests once
+- `bun test --watch` — watch mode
+- `bun test <pattern>` — limit to matching file or test names (for example `bun test application.bootstrap`)
+- `bun run test:coverage` — same suite with coverage (summary in the terminal and `coverage/lcov.info`)
+
+Co-locate tests as `*.test.ts` next to sources. Import `reflect-metadata` first in any file that loads decorated
+classes, same as in application code.
+
+Integration-style cases use `*.integration.test.ts` where the whole `Application` stack is exercised (for example the
+request pipeline). Shared HTTP fixtures for application tests live under `src/testing/fixtures/` as **factory
+functions** so each test gets fresh decorator metadata after `MetadataRegistry.clear()` in `afterEach`.
 
 ## Startup diagnostics guide mode
 

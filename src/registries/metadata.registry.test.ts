@@ -145,6 +145,18 @@ describe('MetadataRegistry', () => {
 		})
 	})
 
+	describe('clearHandlerComponents()', () => {
+		test('clears handler map without removing controller routes', () => {
+			MetadataRegistry.addRoute(FakeController, { path: '/', method: 'GET', handlerName: 'x' })
+			MetadataRegistry.registerHandler('filter', 'Ctrl:index', fakeFilter as any)
+
+			MetadataRegistry.clearHandlerComponents()
+
+			expect(MetadataRegistry.getRoutes(FakeController).length).toBe(1)
+			expect(MetadataRegistry.getHandler('filter', 'Ctrl:index')).toEqual([])
+		})
+	})
+
 	describe('clear()', () => {
 		test('resets all data', () => {
 			MetadataRegistry.addRoute(FakeController, { path: '/', method: 'GET', handlerName: 'x' })

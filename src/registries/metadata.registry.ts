@@ -261,8 +261,19 @@ export class MetadataRegistry {
 	}
 
 	/**
+	 * Clears handler-level component registrations created via {@link registerHandler}.
+	 * Does not remove decorator-defined routes, controllers, or modules.
+	 */
+	static clearHandlerComponents(): void {
+		for (const map of this.handler.values()) {
+			map.clear()
+		}
+	}
+
+	/**
 	 * Clears all registered decorator metadata.
-	 * Primarily used for testing.
+	 * Primarily used for testing. Warning: clearing after importing decorated classes
+	 * (e.g. shared fixtures) removes their metadata until those modules are re-evaluated.
 	 */
 	static clear(): void {
 		this.routes.clear()

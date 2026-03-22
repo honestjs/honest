@@ -1,8 +1,9 @@
 import 'reflect-metadata'
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import { Controller, Get, UseFilters, UseGuards, UseMiddleware, UsePipes } from './decorators'
 import { createParamDecorator } from './helpers'
 import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard, IMiddleware, IPipe } from './interfaces'
+import { MetadataRegistry } from './registries'
 import { createTestApplication } from './testing'
 import type { Context, Next } from 'hono'
 
@@ -58,6 +59,10 @@ const CustomParam = createParamDecorator('custom', (_data, c) => c.req.query('va
 const AsyncCustomParam = createParamDecorator('custom', async (_data, c) => {
 	await Promise.resolve()
 	return c.req.query('val') || 'default'
+})
+
+afterEach(() => {
+	MetadataRegistry.clear()
 })
 
 describe('Pipeline integration', () => {

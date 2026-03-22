@@ -1,7 +1,7 @@
 {
 	"name": "honestjs",
 	"description": "HonestJS - a modern web framework built on top of Hono",
-	"version": "0.1.17",
+	"version": "0.1.18",
 	"author": "Orkhan Karimov <karimovok1@gmail.com> (https://github.com/kerimovok)",
 	"repository": {
 		"type": "git",
@@ -53,6 +53,7 @@
 		"prepare": "husky",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
+		"test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov",
 		"build": "bun run clean && bun build ./src/index.ts --outdir=dist --target=node --minify --external hono --external reflect-metadata && bun run build:types",
 		"build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
 		"lint": "eslint .",

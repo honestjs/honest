@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
 import { Controller, Get } from '../decorators'
 import { createControllerTestApplication } from './create-controller-test-application'
 import { createTestApplication } from './create-test-application'
@@ -7,12 +7,15 @@ import { createServiceTestContainer } from './create-service-test-container'
 import { createTestingModule } from './create-testing-module'
 import { MetadataRegistry } from '../registries'
 
-@Controller('/helper')
-class HelperController {
-	@Get()
-	index() {
-		return { ok: true }
+function createHelperController() {
+	@Controller('/helper')
+	class HelperController {
+		@Get()
+		index() {
+			return { ok: true }
+		}
 	}
+	return HelperController
 }
 
 class CounterService {
@@ -29,6 +32,10 @@ class MockedCounterService extends CounterService {
 		return 999
 	}
 }
+
+afterEach(() => {
+	MetadataRegistry.clear()
+})
 
 describe('testing harness', () => {
 	test('createTestingModule registers module metadata with provided options', () => {
@@ -72,7 +79,7 @@ describe('testing harness', () => {
 
 	test('createControllerTestApplication mounts a single controller', async () => {
 		const testApp = await createControllerTestApplication({
-			controller: HelperController
+			controller: createHelperController()
 		})
 
 		const response = await testApp.request('/helper')
@@ -83,7 +90,7 @@ describe('testing harness', () => {
 	test('createControllerTestApplication passes appOptions through', async () => {
 		await expect(
 			createControllerTestApplication({
-				controller: HelperController,
+				controller: createHelperController(),
 				appOptions: {
 					routing: {
 						prefix: 'api'
@@ -93,7 +100,7 @@ describe('testing harness', () => {
 		).resolves.toBeDefined()
 
 		const testApp = await createControllerTestApplication({
-			controller: HelperController,
+			controller: createHelperController(),
 			appOptions: {
 				routing: {
 					prefix: 'api'
