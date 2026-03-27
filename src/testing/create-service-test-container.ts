@@ -1,4 +1,4 @@
-import { NoopLogger } from '../diagnostics'
+import { NoopLogger } from '../loggers'
 import { Container } from '../di'
 import type { CreateServiceTestContainerOptions, ServiceTestOverride, TestServiceContainer } from './testing.interface'
 

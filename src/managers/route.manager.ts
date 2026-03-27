@@ -1,6 +1,6 @@
 import type { Context, Hono } from 'hono'
 import { VERSION_NEUTRAL } from '../constants'
-import { NoopLogger } from '../diagnostics'
+import { NoopLogger } from '../loggers'
 import type { DiContainer, ILogger, IMetadataRepository, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'

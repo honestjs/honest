@@ -1,4 +1,4 @@
-import { NoopLogger } from '../diagnostics'
+import { NoopLogger } from '../loggers'
 import type { LogEvent, DiContainer, ILogger, IServiceRegistry } from '../interfaces'
 import { StaticServiceRegistry } from '../registries'
 import type { Constructor } from '../types'

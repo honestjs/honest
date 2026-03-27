@@ -15,7 +15,7 @@ import type {
 	MiddlewareType,
 	PipeType
 } from '../interfaces'
-import { NoopLogger } from '../diagnostics'
+import { NoopLogger } from '../loggers'
 import { type ComponentType, type ComponentTypeMap } from '../registries'
 import { StaticMetadataRepository } from '../registries'
 import type { Constructor } from '../types'

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { ApplicationContext } from './application-context'
-import { ConsoleLogger } from './diagnostics'
+import { ConsoleLogger } from './loggers'
 import { Container } from './di'
 import { ErrorHandler, NotFoundHandler } from './handlers'
 import type {
