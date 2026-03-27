@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/honestjs/" target="blank"><img src="https://honestjs.dev/images/honestjs-resized.png" width="120" alt="Honest.js Logo" /></a>
+  <a href="https://github.com/honestjs/" target="blank"><img src="https://honestjs.dev/images/honestjs.png" width="120" alt="Honest.js Logo" /></a>
 </p>
 
 <p align="center">
