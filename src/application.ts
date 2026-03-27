@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
 import { ApplicationContext } from './application-context'
-import { ConsoleDiagnosticsEmitter } from './diagnostics'
+import { ConsoleLogger } from './diagnostics'
 import { Container } from './di'
 import { ErrorHandler, NotFoundHandler } from './handlers'
 import type {
-	IDiagnosticsEmitter,
+	ILogger,
 	DiContainer,
 	HonestOptions,
 	IApplicationContext,
@@ -34,7 +34,7 @@ export class Application {
 	private readonly metadataRepository: IMetadataRepository
 	private readonly componentManager: ComponentManager
 	private readonly routeManager: RouteManager
-	private readonly diagnosticsEmitter: IDiagnosticsEmitter
+	private readonly logger: ILogger
 	private readonly options: HonestOptions
 
 	private static readonly DEFAULT_PLUGIN_NAME = 'AnonymousPlugin'
@@ -50,16 +50,16 @@ export class Application {
 
 		this.hono = new Hono(this.options.hono)
 
-		this.diagnosticsEmitter = this.options.diagnostics || new ConsoleDiagnosticsEmitter()
+		this.logger = this.options.logger || new ConsoleLogger()
 
-		this.container = this.options.container || new Container(undefined, this.diagnosticsEmitter, debugDi)
+		this.container = this.options.container || new Container(undefined, this.logger, debugDi)
 
 		this.context = new ApplicationContext()
 
 		this.routeRegistry = new RouteRegistry()
 		this.metadataRepository = metadataRepository
 
-		this.componentManager = new ComponentManager(this.container, this.metadataRepository, this.diagnosticsEmitter)
+		this.componentManager = new ComponentManager(this.container, this.metadataRepository, this.logger)
 		this.componentManager.setupGlobalComponents(this.options)
 
 		this.setupErrorHandlers()
@@ -70,7 +70,7 @@ export class Application {
 			this.routeRegistry,
 			this.componentManager,
 			this.metadataRepository,
-			this.diagnosticsEmitter,
+			this.logger,
 			{
 				prefix: this.options.routing?.prefix,
 				version: this.options.routing?.version,
@@ -79,7 +79,7 @@ export class Application {
 		)
 
 		if (this.options.deprecations?.printPreV1Warning) {
-			this.diagnosticsEmitter.emit({
+			this.logger.emit({
 				level: 'warn',
 				category: 'deprecations',
 				message: 'Pre-v1 warning: APIs may change before 1.0.0.'
@@ -310,7 +310,7 @@ export class Application {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		const hints = this.createStartupGuideHints(errorMessage)
 
-		this.diagnosticsEmitter.emit({
+		this.logger.emit({
 			level: 'warn',
 			category: 'startup',
 			message: 'Startup guide',
@@ -323,7 +323,7 @@ export class Application {
 		})
 
 		if (verbose) {
-			this.diagnosticsEmitter.emit({
+			this.logger.emit({
 				level: 'warn',
 				category: 'startup',
 				message: 'Startup guide (verbose)',
@@ -382,7 +382,7 @@ export class Application {
 			try {
 				await this.routeManager.registerController(controller)
 				if (debugRoutes) {
-					this.diagnosticsEmitter.emit({
+					this.logger.emit({
 						level: 'info',
 						category: 'routes',
 						message: 'Registered controller routes',
@@ -395,7 +395,7 @@ export class Application {
 				}
 			} catch (error: unknown) {
 				if (debugRoutes) {
-					this.diagnosticsEmitter.emit({
+					this.logger.emit({
 						level: 'error',
 						category: 'routes',
 						message: 'Failed to register controller routes',
@@ -432,7 +432,7 @@ export class Application {
 
 		try {
 			if (debugPlugins && orderedEntries.length > 0) {
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'info',
 					category: 'plugins',
 					message: `Plugin order: ${orderedEntries.map(({ name }) => name).join(' -> ')}`
@@ -440,6 +440,7 @@ export class Application {
 			}
 
 			for (const { plugin, preProcessors } of orderedEntries) {
+				plugin.logger = app.logger
 				for (const fn of preProcessors) {
 					await fn(app, app.hono, ctx)
 				}
@@ -452,7 +453,7 @@ export class Application {
 
 			const routes = app.getRoutes()
 			if (debugStartup) {
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'info',
 					category: 'startup',
 					message: `Application registered ${routes.length} route(s)`,
@@ -464,7 +465,7 @@ export class Application {
 			}
 			if (options.strict?.requireRoutes && routes.length === 0) {
 				strictNoRoutesFailureEmitted = true
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'error',
 					category: 'startup',
 					message: 'Strict mode failed: no routes were registered',
@@ -481,7 +482,7 @@ export class Application {
 				throw strictError
 			}
 			if (debugRoutes) {
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'info',
 					category: 'routes',
 					message: 'Registered routes',
@@ -501,7 +502,7 @@ export class Application {
 			}
 
 			if (debugStartup) {
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'info',
 					category: 'startup',
 					message: 'Application startup completed',
@@ -519,7 +520,7 @@ export class Application {
 			app.emitStartupGuide(error, rootModule)
 
 			if (debugStartup && !strictNoRoutesFailureEmitted) {
-				app.diagnosticsEmitter.emit({
+				app.logger.emit({
 					level: 'error',
 					category: 'startup',
 					message: 'Application startup failed',

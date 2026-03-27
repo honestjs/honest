@@ -1,10 +1,10 @@
-import type { DiagnosticEvent, IDiagnosticsEmitter } from '../interfaces'
+import type { LogEvent, ILogger } from '../interfaces'
 
 /**
- * Diagnostics emitter implementation that intentionally does nothing.
+ * Logger implementation that intentionally does nothing.
  */
-export class NoopDiagnosticsEmitter implements IDiagnosticsEmitter {
-	emit(_event: DiagnosticEvent): void {
+export class NoopLogger implements ILogger {
+	emit(_event: LogEvent): void {
 		// no-op
 	}
 }

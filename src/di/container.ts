@@ -1,5 +1,5 @@
-import { NoopDiagnosticsEmitter } from '../diagnostics'
-import type { DiagnosticEvent, DiContainer, IDiagnosticsEmitter, IServiceRegistry } from '../interfaces'
+import { NoopLogger } from '../diagnostics'
+import type { LogEvent, DiContainer, ILogger, IServiceRegistry } from '../interfaces'
 import { StaticServiceRegistry } from '../registries'
 import type { Constructor } from '../types'
 
@@ -9,7 +9,7 @@ import type { Constructor } from '../types'
 export class Container implements DiContainer {
 	constructor(
 		private readonly serviceRegistry: IServiceRegistry = new StaticServiceRegistry(),
-		private readonly diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter(),
+		private readonly logger: ILogger = new NoopLogger(),
 		private readonly debugDi = false
 	) {}
 
@@ -18,11 +18,11 @@ export class Container implements DiContainer {
 	 */
 	private instances = new Map<Constructor, any>()
 
-	private emitDiagnostic(event: DiagnosticEvent): void {
+	private emitLog(event: LogEvent): void {
 		if (!this.debugDi) {
 			return
 		}
-		this.diagnosticsEmitter.emit(event)
+		this.logger.emit(event)
 	}
 
 	/**
@@ -39,7 +39,7 @@ export class Container implements DiContainer {
 	 */
 	private resolveWithTracking<T>(target: Constructor<T>, resolving: Set<Constructor>): T {
 		if (this.instances.has(target)) {
-			this.emitDiagnostic({
+			this.emitLog({
 				level: 'debug',
 				category: 'di',
 				message: `Resolved ${target.name} from DI cache`
@@ -49,7 +49,7 @@ export class Container implements DiContainer {
 
 		if (resolving.has(target)) {
 			const cycle = [...resolving.keys(), target].map((t) => t.name).join(' -> ')
-			this.emitDiagnostic({
+			this.emitLog({
 				level: 'error',
 				category: 'di',
 				message: `Circular dependency detected while resolving ${target.name}`,
@@ -59,7 +59,7 @@ export class Container implements DiContainer {
 		}
 		resolving.add(target)
 
-		this.emitDiagnostic({
+		this.emitLog({
 			level: 'debug',
 			category: 'di',
 			message: `Resolving ${target.name}`,
@@ -69,7 +69,7 @@ export class Container implements DiContainer {
 		const paramTypes = Reflect.getMetadata('design:paramtypes', target) || []
 		if (target.length > 0 && paramTypes.length === 0) {
 			if (!this.serviceRegistry.isService(target)) {
-				this.emitDiagnostic({
+				this.emitLog({
 					level: 'error',
 					category: 'di',
 					message: `Cannot resolve ${target.name}: missing @Service() decorator`
@@ -78,7 +78,7 @@ export class Container implements DiContainer {
 					`Cannot resolve ${target.name}: it is not decorated with @Service(). Did you forget to add @Service() to the class?`
 				)
 			}
-			this.emitDiagnostic({
+			this.emitLog({
 				level: 'error',
 				category: 'di',
 				message: `Cannot resolve ${target.name}: missing constructor metadata`
@@ -90,7 +90,7 @@ export class Container implements DiContainer {
 
 		const dependencies = paramTypes.map((paramType: Constructor, index: number) => {
 			if (!paramType || paramType === Object || paramType === Array || paramType === Function) {
-				this.emitDiagnostic({
+				this.emitLog({
 					level: 'error',
 					category: 'di',
 					message: `Cannot resolve dependency at index ${index} of ${target.name}`
@@ -105,7 +105,7 @@ export class Container implements DiContainer {
 		const instance = new target(...dependencies)
 		this.instances.set(target, instance)
 
-		this.emitDiagnostic({
+		this.emitLog({
 			level: 'debug',
 			category: 'di',
 			message: `Created ${target.name} instance`,

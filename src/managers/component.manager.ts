@@ -6,7 +6,7 @@ import type {
 	DiContainer,
 	FilterType,
 	GuardType,
-	IDiagnosticsEmitter,
+	ILogger,
 	IMetadataRepository,
 	IFilter,
 	IGuard,
@@ -15,7 +15,7 @@ import type {
 	MiddlewareType,
 	PipeType
 } from '../interfaces'
-import { NoopDiagnosticsEmitter } from '../diagnostics'
+import { NoopLogger } from '../diagnostics'
 import { type ComponentType, type ComponentTypeMap } from '../registries'
 import { StaticMetadataRepository } from '../registries'
 import type { Constructor } from '../types'
@@ -42,7 +42,7 @@ export class ComponentManager {
 	constructor(
 		private readonly container: DiContainer,
 		private readonly metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
-		private readonly diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter()
+		private readonly logger: ILogger = new NoopLogger()
 	) {}
 
 	/**
@@ -229,7 +229,7 @@ export class ComponentManager {
 				}
 			} catch (filterError) {
 				const filterName = filter.constructor?.name || 'UnknownFilter'
-				this.diagnosticsEmitter.emit({
+				this.logger.emit({
 					level: 'error',
 					category: 'errors',
 					message: `Error in exception filter ${filterName}`,
@@ -256,7 +256,7 @@ export class ComponentManager {
 		const moduleOptions = this.metadataRepository.getModuleOptions(moduleClass)
 
 		if (!moduleOptions) {
-			this.diagnosticsEmitter.emit({
+			this.logger.emit({
 				level: 'error',
 				category: 'startup',
 				message: `Module ${moduleClass.name} is not properly decorated with @Module()`

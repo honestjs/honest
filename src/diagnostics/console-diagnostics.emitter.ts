@@ -1,10 +1,10 @@
-import type { DiagnosticEvent, IDiagnosticsEmitter } from '../interfaces'
+import type { LogEvent, ILogger } from '../interfaces'
 
 /**
- * Default diagnostics emitter that writes structured events to console.
+ * Default logger that writes structured events to console.
  */
-export class ConsoleDiagnosticsEmitter implements IDiagnosticsEmitter {
-	emit(event: DiagnosticEvent): void {
+export class ConsoleLogger implements ILogger {
+	emit(event: LogEvent): void {
 		const prefix = `[HonestJS:${event.category}]`
 		const payload = event.details ? [prefix, event.message, event.details] : [prefix, event.message]
 

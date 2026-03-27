@@ -144,7 +144,7 @@ const { app, hono } = await Application.create(AppModule, {
 		di: true,
 		startup: true
 	},
-	diagnostics: myDiagnosticsEmitter,
+	logger: myLogger,
 	strict: { requireRoutes: true },
 	deprecations: { printPreV1Warning: true },
 	container: myContainer,

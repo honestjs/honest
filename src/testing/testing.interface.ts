@@ -1,6 +1,6 @@
 import type { Hono } from 'hono'
 import type { Application } from '../application'
-import type { DiContainer, HonestOptions, IDiagnosticsEmitter, ModuleOptions } from '../interfaces'
+import type { DiContainer, HonestOptions, ILogger, ModuleOptions } from '../interfaces'
 import type { Constructor } from '../types'
 
 /**
@@ -88,9 +88,9 @@ export interface CreateServiceTestContainerOptions {
 	preload?: Constructor[]
 
 	/**
-	 * Optional diagnostics emitter used when debugDi is enabled.
+	 * Optional logger used when debugDi is enabled.
 	 */
-	diagnostics?: IDiagnosticsEmitter
+	logger?: ILogger
 
 	/**
 	 * Enable DI diagnostics while resolving services.

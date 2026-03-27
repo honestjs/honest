@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Application } from './application'
-import type { DiagnosticEvent, IDiagnosticsEmitter } from './interfaces'
+import type { LogEvent, ILogger } from './interfaces'
 import { MetadataRegistry } from './registries'
 import {
 	createBrokenControllerModule,
@@ -18,8 +18,8 @@ afterEach(() => {
 
 describe('Application diagnostics', () => {
 	test('startup diagnostics includes route count in debug mode', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -29,7 +29,7 @@ describe('Application diagnostics', () => {
 			controller: createTestController(),
 			appOptions: {
 				debug: true,
-				diagnostics
+				logger
 			}
 		})
 
@@ -45,8 +45,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('strict.requireRoutes emits startup diagnostic error before throwing', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -55,7 +55,7 @@ describe('Application diagnostics', () => {
 		await expect(
 			Application.create(createEmptyModule(), {
 				strict: { requireRoutes: true },
-				diagnostics
+				logger
 			})
 		).rejects.toThrow('Strict mode: no routes were registered')
 
@@ -70,8 +70,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('startup diagnostics includes completion event with timing details', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -81,7 +81,7 @@ describe('Application diagnostics', () => {
 			controller: createTestController(),
 			appOptions: {
 				debug: true,
-				diagnostics
+				logger
 			}
 		})
 
@@ -100,8 +100,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('debug.startup enables startup diagnostics independently from debug.routes', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -111,7 +111,7 @@ describe('Application diagnostics', () => {
 			controller: createTestController(),
 			appOptions: {
 				debug: { startup: true, routes: false },
-				diagnostics
+				logger
 			}
 		})
 
@@ -120,14 +120,14 @@ describe('Application diagnostics', () => {
 	})
 
 	test('startup diagnostics emits generic startup failure event in debug mode', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
 		}
 
-		await expect(Application.create(createBrokenControllerModule(), { debug: true, diagnostics })).rejects.toThrow(
+		await expect(Application.create(createBrokenControllerModule(), { debug: true, logger })).rejects.toThrow(
 			'is not decorated with @Controller()'
 		)
 
@@ -145,8 +145,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('startupGuide emits actionable hints for strict no-routes startup failure', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -156,7 +156,7 @@ describe('Application diagnostics', () => {
 			Application.create(createEmptyModule(), {
 				strict: { requireRoutes: true },
 				startupGuide: true,
-				diagnostics
+				logger
 			})
 		).rejects.toThrow('Strict mode: no routes were registered')
 
@@ -171,8 +171,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('startupGuide emits actionable hints for missing @Controller() startup failure', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -181,7 +181,7 @@ describe('Application diagnostics', () => {
 		await expect(
 			Application.create(createBrokenControllerModule(), {
 				startupGuide: { verbose: true },
-				diagnostics
+				logger
 			})
 		).rejects.toThrow('is not decorated with @Controller()')
 
@@ -204,8 +204,8 @@ describe('Application diagnostics', () => {
 	})
 
 	test('debug.routes emits per-controller route registration timing diagnostics', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -215,7 +215,7 @@ describe('Application diagnostics', () => {
 			controllers: [createDiagnosticsAController(), createDiagnosticsBController()],
 			appOptions: {
 				debug: { routes: true, startup: false },
-				diagnostics
+				logger
 			}
 		})
 

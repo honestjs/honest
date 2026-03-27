@@ -1,13 +1,7 @@
 import type { Context, Hono } from 'hono'
 import { VERSION_NEUTRAL } from '../constants'
-import { NoopDiagnosticsEmitter } from '../diagnostics'
-import type {
-	DiContainer,
-	IDiagnosticsEmitter,
-	IMetadataRepository,
-	ParameterMetadata,
-	RouteDefinition
-} from '../interfaces'
+import { NoopLogger } from '../diagnostics'
+import type { DiContainer, ILogger, IMetadataRepository, ParameterMetadata, RouteDefinition } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'
 import { ParameterResolver } from './parameter.resolver'
@@ -31,7 +25,7 @@ export class RouteManager {
 	private parameterResolver: ParameterResolver
 	private pipelineExecutor: PipelineExecutor
 	private metadataRepository: IMetadataRepository
-	private diagnosticsEmitter: IDiagnosticsEmitter
+	private logger: ILogger
 	private globalPrefix?: string
 	private globalVersion?: number | typeof VERSION_NEUTRAL | number[]
 
@@ -41,7 +35,7 @@ export class RouteManager {
 		routeRegistry: RouteRegistry,
 		componentManager: ComponentManager,
 		metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
-		diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter(),
+		logger: ILogger = new NoopLogger(),
 		options: {
 			prefix?: string
 			version?: number | typeof VERSION_NEUTRAL | number[]
@@ -53,12 +47,12 @@ export class RouteManager {
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
 		this.parameterResolver = new ParameterResolver(this.componentManager)
-		this.diagnosticsEmitter = diagnosticsEmitter
+		this.logger = logger
 		this.pipelineExecutor = new PipelineExecutor(
 			this.componentManager,
 			this.parameterResolver,
 			new HandlerInvoker(),
-			this.diagnosticsEmitter,
+			this.logger,
 			Boolean(options.debugPipeline)
 		)
 		this.metadataRepository = metadataRepository

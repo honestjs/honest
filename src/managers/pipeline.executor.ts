@@ -1,8 +1,8 @@
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { HONEST_PIPELINE_CONTROLLER_KEY, HONEST_PIPELINE_HANDLER_KEY } from '../constants'
-import { NoopDiagnosticsEmitter } from '../diagnostics'
-import type { IDiagnosticsEmitter, ParameterMetadata } from '../interfaces'
+import { NoopLogger } from '../diagnostics'
+import type { ILogger, ParameterMetadata } from '../interfaces'
 import type { IPipe } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'
@@ -27,7 +27,7 @@ export class PipelineExecutor {
 		private readonly componentManager: ComponentManager,
 		private readonly parameterResolver: ParameterResolver,
 		private readonly handlerInvoker: HandlerInvoker,
-		private readonly diagnosticsEmitter: IDiagnosticsEmitter = new NoopDiagnosticsEmitter(),
+		private readonly logger: ILogger = new NoopLogger(),
 		private readonly debugPipeline = false
 	) {}
 
@@ -43,7 +43,7 @@ export class PipelineExecutor {
 			const canActivate = await guard.canActivate(context)
 			if (!canActivate) {
 				if (this.debugPipeline) {
-					this.diagnosticsEmitter.emit({
+					this.logger.emit({
 						level: 'warn',
 						category: 'pipeline',
 						message: `Guard rejected request at ${controllerClass.name}.${String(handlerName)}`,
@@ -66,7 +66,7 @@ export class PipelineExecutor {
 		})
 
 		if (this.debugPipeline) {
-			this.diagnosticsEmitter.emit({
+			this.logger.emit({
 				level: 'debug',
 				category: 'pipeline',
 				message: `Resolved handler arguments for ${controllerClass.name}.${String(handlerName)}`,

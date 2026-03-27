@@ -1,4 +1,4 @@
-import { NoopDiagnosticsEmitter } from '../diagnostics'
+import { NoopLogger } from '../diagnostics'
 import { Container } from '../di'
 import type { CreateServiceTestContainerOptions, ServiceTestOverride, TestServiceContainer } from './testing.interface'
 
@@ -6,8 +6,8 @@ import type { CreateServiceTestContainerOptions, ServiceTestOverride, TestServic
  * Create a lightweight DI container for service-only tests without HTTP bootstrap.
  */
 export function createServiceTestContainer(options: CreateServiceTestContainerOptions = {}): TestServiceContainer {
-	const diagnostics = options.diagnostics ?? new NoopDiagnosticsEmitter()
-	const container = new Container(undefined, diagnostics, Boolean(options.debugDi))
+	const logger = options.logger ?? new NoopLogger()
+	const container = new Container(undefined, logger, Boolean(options.debugDi))
 
 	for (const override of options.overrides ?? []) {
 		const typedOverride = override as ServiceTestOverride

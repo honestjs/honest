@@ -19,7 +19,7 @@ Main configuration interface for the Honest application:
 ```typescript
 interface HonestOptions {
 	debug?: boolean | { routes?: boolean; plugins?: boolean; pipeline?: boolean; di?: boolean; startup?: boolean }
-	diagnostics?: IDiagnosticsEmitter
+	logger?: ILogger
 	strict?: { requireRoutes?: boolean }
 	deprecations?: { printPreV1Warning?: boolean }
 	container?: DiContainer
@@ -44,24 +44,26 @@ interface HonestOptions {
 }
 ```
 
-#### `DiagnosticEvent` and `IDiagnosticsEmitter`
+#### `LogEvent` and `ILogger`
 
-Structured diagnostics event contract used by framework runtime components:
+Structured logging for framework diagnostics: startup, routing, plugins, the pipeline, DI, and errors flow through
+`LogEvent` with a level, category, message, and optional details. Application code and plugins use `ILogger` (and the
+injected `plugin.logger`) to emit the same contract.
 
 ```typescript
-type DiagnosticLevel = 'debug' | 'info' | 'warn' | 'error'
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
-type DiagnosticCategory = 'startup' | 'routes' | 'plugins' | 'deprecations' | 'pipeline' | 'di' | 'errors'
+type LogCategory = 'startup' | 'routes' | 'plugins' | 'deprecations' | 'pipeline' | 'di' | 'errors'
 
-interface DiagnosticEvent {
-	level: DiagnosticLevel
-	category: DiagnosticCategory
+interface LogEvent {
+	level: LogLevel
+	category: LogCategory
 	message: string
 	details?: Record<string, unknown>
 }
 
-interface IDiagnosticsEmitter {
-	emit(event: DiagnosticEvent): void
+interface ILogger {
+	emit(event: LogEvent): void
 }
 ```
 
@@ -167,10 +169,12 @@ interface IFilter {
 
 #### `IPlugin`
 
-Interface for framework plugins:
+Interface for framework plugins. The framework sets `logger` on the plugin instance before invoking lifecycle hooks, so
+hooks take only `(app, hono)` and use `this.logger` for structured diagnostics.
 
 ```typescript
 interface IPlugin {
+	logger?: ILogger
 	beforeModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 	afterModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 }
@@ -381,16 +385,26 @@ class ValidationExceptionFilter implements IFilter {
 ### Creating a Plugin
 
 ```typescript
-import { Application, IPlugin } from '@honest/framework'
+import { Application, ILogger, IPlugin } from '@honest/framework'
 
 class LoggerPlugin implements IPlugin {
+	logger?: ILogger
+
 	async beforeModulesRegistered(app: Application, hono: Hono): Promise<void> {
-		console.log('Setting up logging...')
+		this.logger?.emit({
+			level: 'info',
+			category: 'plugins',
+			message: 'Setting up logging...'
+		})
 		// Plugin setup logic
 	}
 
 	async afterModulesRegistered(app: Application, hono: Hono): Promise<void> {
-		console.log('Logging setup complete')
+		this.logger?.emit({
+			level: 'info',
+			category: 'plugins',
+			message: 'Logging setup complete'
+		})
 		// Plugin cleanup logic
 	}
 }

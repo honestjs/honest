@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Controller, Get, UseFilters, UseGuards, UseMiddleware, UsePipes } from './decorators'
 import { createParamDecorator } from './helpers'
-import type { DiagnosticEvent, IDiagnosticsEmitter, IFilter, IGuard, IMiddleware, IPipe } from './interfaces'
+import type { LogEvent, ILogger, IFilter, IGuard, IMiddleware, IPipe } from './interfaces'
 import { MetadataRegistry } from './registries'
 import { createTestApplication } from './testing'
 import type { Context, Next } from 'hono'
@@ -231,8 +231,8 @@ describe('Pipeline integration', () => {
 	})
 
 	test('pipeline diagnostics emits event when guard rejects in debug mode', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -251,7 +251,7 @@ describe('Pipeline integration', () => {
 			controllers: [DiagnosticsRejectController],
 			appOptions: {
 				debug: { pipeline: true },
-				diagnostics
+				logger
 			}
 		})
 

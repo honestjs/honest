@@ -113,9 +113,10 @@ class AppModule {}
 ### Plugin System
 
 ```typescript
-import { Constructor } from '@honest/framework'
+import { Constructor, ILogger } from '@honest/framework'
 
 interface IPlugin {
+	logger?: ILogger
 	beforeModulesRegistered?(app: Application, hono: Hono): void | Promise<void>
 	afterModulesRegistered?(app: Application, hono: Hono): void | Promise<void>
 }
@@ -133,6 +134,9 @@ class PluginManager {
 	}
 }
 ```
+
+Inside lifecycle hooks, use `this.logger` (set by the framework before the hook runs) for structured diagnostics via
+`ILogger.emit`.
 
 ## Type Safety Benefits
 

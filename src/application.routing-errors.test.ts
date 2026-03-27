@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { Application } from './application'
-import type { DiagnosticEvent, IDiagnosticsEmitter } from './interfaces'
+import type { LogEvent, ILogger } from './interfaces'
 import { MetadataRegistry } from './registries'
 import {
 	createBrokenControllerModule,
@@ -34,8 +34,8 @@ describe('Application routing errors', () => {
 	})
 
 	test('debug.routes emits per-controller failure diagnostics when registration throws', async () => {
-		const events: DiagnosticEvent[] = []
-		const diagnostics: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
@@ -44,7 +44,7 @@ describe('Application routing errors', () => {
 		await expect(
 			Application.create(createBrokenControllerModule(), {
 				debug: { routes: true, startup: false },
-				diagnostics
+				logger
 			})
 		).rejects.toThrow('is not decorated with @Controller()')
 

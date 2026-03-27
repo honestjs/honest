@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { describe, expect, test } from 'bun:test'
 import { Service } from '../decorators'
-import type { DiagnosticEvent, IDiagnosticsEmitter, IServiceRegistry } from '../interfaces'
+import type { LogEvent, ILogger, IServiceRegistry } from '../interfaces'
 import { Container } from './container'
 
 describe('Container', () => {
@@ -103,14 +103,14 @@ describe('Container', () => {
 		}
 		Reflect.defineMetadata('design:paramtypes', [Dependency], Consumer)
 
-		const events: DiagnosticEvent[] = []
-		const diagnosticsEmitter: IDiagnosticsEmitter = {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
 			emit(event) {
 				events.push(event)
 			}
 		}
 
-		const container = new Container(undefined, diagnosticsEmitter, true)
+		const container = new Container(undefined, logger, true)
 		container.resolve(Consumer)
 		container.resolve(Consumer)
 

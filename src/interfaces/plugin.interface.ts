@@ -1,6 +1,7 @@
 import type { Hono } from 'hono'
 import type { Application } from '../application'
 import type { IApplicationContext } from './application-context.interface'
+import type { ILogger } from './logger.interface'
 import type { Constructor } from '../types'
 
 /**
@@ -64,20 +65,24 @@ export interface IPlugin {
 	meta?: PluginMeta
 
 	/**
-	 * Hook that runs before module registration begins
-	 * Use this to set up plugin functionality that modules might depend on
+	 * Application logger, injected by the framework before lifecycle hooks run.
+	 * Use this to emit structured log events from within plugin code.
+	 */
+	logger?: ILogger
+
+	/**
+	 * Hook that runs before module registration begins.
+	 * Use this to set up plugin functionality that modules might depend on.
 	 * @param app - The Honest application instance
 	 * @param hono - The underlying Hono application instance
-	 * @returns Void or a Promise that resolves to void
 	 */
 	beforeModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 
 	/**
-	 * Hook that runs after all modules have been registered
-	 * Use this to perform cleanup or setup that requires all modules to be ready
+	 * Hook that runs after all modules have been registered.
+	 * Use this to perform cleanup or setup that requires all modules to be ready.
 	 * @param app - The Honest application instance
 	 * @param hono - The underlying Hono application instance
-	 * @returns Void or a Promise that resolves to void
 	 */
 	afterModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 }
