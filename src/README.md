@@ -27,8 +27,8 @@ Honest is designed to provide a clean, decorator-based API for building web appl
 - **Decorator-based routing** with support for HTTP methods, parameters, and middleware
 - **Dependency injection** for managing service instances and dependencies
 - **Modular architecture** for organizing application components
-- **Plugin system** for extending framework functionality
-- **Deterministic plugin orchestration** with ordering constraints and capability contracts
+- **Plugin system** for extending framework functionality (lifecycle hooks, optional pre/post processors; execution
+  order follows `options.plugins`)
 - **Snapshot-based runtime metadata isolation** so each app instance runs on immutable startup metadata
 - **Version-aware routing** with support for API versioning
 - **Startup guide diagnostics mode** with actionable hints for common startup failures
@@ -85,17 +85,7 @@ Set `startupGuide` in `Application.create()` options to emit structured startup 
 - `startupGuide: true` - concise, actionable hints
 - `startupGuide: { verbose: true }` - includes extra guided troubleshooting steps
 
-Guide hints cover common issues such as missing decorators, constructor metadata setup, strict no-routes startup, and
-plugin ordering/capability errors.
-
-## Plugin ordering and capability contracts
-
-Plugins support startup ordering and capability validation:
-
-- Entry-level ordering: `name`, `before`, `after`
-- Plugin metadata contracts: `meta.provides`, `meta.requires`
-
-This allows predictable startup sequencing and fast failure when required plugin capabilities are missing.
+Guide hints cover common issues such as missing decorators, constructor metadata setup, and strict no-routes startup.
 
 ## Application context (registry)
 

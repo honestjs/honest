@@ -11,23 +11,13 @@ import type { Constructor } from '../types'
 export type PluginProcessor = (app: Application, hono: Hono, ctx: IApplicationContext) => void | Promise<void>
 
 /**
- * Optional metadata for plugin composition and startup contract checks.
+ * Optional metadata for plugin diagnostics.
  */
 export interface PluginMeta {
 	/**
-	 * Stable plugin name used for ordering constraints and diagnostics.
+	 * Stable plugin name used for diagnostics.
 	 */
 	name?: string
-
-	/**
-	 * Capabilities this plugin provides for subsequent plugins.
-	 */
-	provides?: string[]
-
-	/**
-	 * Capabilities this plugin expects to be provided earlier in the pipeline.
-	 */
-	requires?: string[]
 }
 
 /**
@@ -37,18 +27,10 @@ export interface PluginMeta {
 export interface PluginEntryObject {
 	plugin: IPlugin | Constructor<IPlugin>
 	/**
-	 * Optional stable plugin name used for ordering and diagnostics.
+	 * Optional stable plugin name for diagnostics.
 	 * Takes precedence over plugin.meta.name.
 	 */
 	name?: string
-	/**
-	 * Ensure this plugin runs before listed plugin names.
-	 */
-	before?: string[]
-	/**
-	 * Ensure this plugin runs after listed plugin names.
-	 */
-	after?: string[]
 	preProcessors?: PluginProcessor[]
 	postProcessors?: PluginProcessor[]
 }
@@ -60,7 +42,7 @@ export interface PluginEntryObject {
  */
 export interface IPlugin {
 	/**
-	 * Optional metadata for plugin capabilities and diagnostics.
+	 * Optional metadata for plugin diagnostics.
 	 */
 	meta?: PluginMeta
 

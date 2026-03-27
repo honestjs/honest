@@ -105,11 +105,6 @@ export class Application {
 	): {
 		plugin: IPlugin
 		name: string
-		before: string[]
-		after: string[]
-		provides: string[]
-		requires: string[]
-		index: number
 		preProcessors: PluginProcessor[]
 		postProcessors: PluginProcessor[]
 	} {
@@ -117,8 +112,6 @@ export class Application {
 			const obj = entry as {
 				plugin: IPlugin | Constructor<IPlugin>
 				name?: string
-				before?: string[]
-				after?: string[]
 				preProcessors?: PluginProcessor[]
 				postProcessors?: PluginProcessor[]
 			}
@@ -127,11 +120,6 @@ export class Application {
 			return {
 				plugin,
 				name,
-				before: obj.before ?? [],
-				after: obj.after ?? [],
-				provides: plugin.meta?.provides ?? [],
-				requires: plugin.meta?.requires ?? [],
-				index,
 				preProcessors: obj.preProcessors ?? [],
 				postProcessors: obj.postProcessors ?? []
 			}
@@ -140,11 +128,6 @@ export class Application {
 		return {
 			plugin,
 			name: this.resolvePluginName(plugin, index),
-			before: [],
-			after: [],
-			provides: plugin.meta?.provides ?? [],
-			requires: plugin.meta?.requires ?? [],
-			index,
 			preProcessors: [],
 			postProcessors: []
 		}
@@ -156,143 +139,6 @@ export class Application {
 			return `${Application.DEFAULT_PLUGIN_NAME}#${index + 1}`
 		}
 		return resolved
-	}
-
-	private resolvePluginExecutionOrder(
-		entries: Array<{
-			plugin: IPlugin
-			name: string
-			before: string[]
-			after: string[]
-			provides: string[]
-			requires: string[]
-			index: number
-			preProcessors: PluginProcessor[]
-			postProcessors: PluginProcessor[]
-		}>
-	): Array<{
-		plugin: IPlugin
-		name: string
-		before: string[]
-		after: string[]
-		provides: string[]
-		requires: string[]
-		index: number
-		preProcessors: PluginProcessor[]
-		postProcessors: PluginProcessor[]
-	}> {
-		if (entries.length === 0) {
-			return entries
-		}
-
-		const byName = new Map<string, number>()
-		for (let i = 0; i < entries.length; i++) {
-			const entry = entries[i]
-			if (byName.has(entry.name)) {
-				throw new Error(
-					`Duplicate plugin name detected: ${entry.name}. Use unique plugin names in options.plugins.`
-				)
-			}
-			byName.set(entry.name, i)
-		}
-
-		const indegree = new Array<number>(entries.length).fill(0)
-		const edges = new Map<number, Set<number>>()
-
-		const addEdge = (from: number, to: number): void => {
-			if (!edges.has(from)) {
-				edges.set(from, new Set())
-			}
-			const targets = edges.get(from)!
-			if (!targets.has(to)) {
-				targets.add(to)
-				indegree[to]++
-			}
-		}
-
-		for (let i = 0; i < entries.length; i++) {
-			const entry = entries[i]
-			for (const dep of entry.after) {
-				const from = byName.get(dep)
-				if (from === undefined) {
-					throw new Error(
-						`Plugin ordering error: ${entry.name} declares after '${dep}', but no such plugin is registered.`
-					)
-				}
-				addEdge(from, i)
-			}
-			for (const dep of entry.before) {
-				const to = byName.get(dep)
-				if (to === undefined) {
-					throw new Error(
-						`Plugin ordering error: ${entry.name} declares before '${dep}', but no such plugin is registered.`
-					)
-				}
-				addEdge(i, to)
-			}
-		}
-
-		const queue: number[] = []
-		for (let i = 0; i < entries.length; i++) {
-			if (indegree[i] === 0) {
-				queue.push(i)
-			}
-		}
-
-		queue.sort((a, b) => entries[a].index - entries[b].index)
-		const sortedIndexes: number[] = []
-
-		while (queue.length > 0) {
-			const index = queue.shift()!
-			sortedIndexes.push(index)
-
-			const nextSet = edges.get(index)
-			if (!nextSet) {
-				continue
-			}
-
-			for (const next of nextSet) {
-				indegree[next]--
-				if (indegree[next] === 0) {
-					queue.push(next)
-				}
-			}
-
-			queue.sort((a, b) => entries[a].index - entries[b].index)
-		}
-
-		if (sortedIndexes.length !== entries.length) {
-			throw new Error('Plugin ordering cycle detected. Check before/after constraints in options.plugins.')
-		}
-
-		return sortedIndexes.map((i) => entries[i])
-	}
-
-	private validatePluginCapabilities(
-		entries: Array<{
-			name: string
-			provides: string[]
-			requires: string[]
-		}>
-	): void {
-		if (entries.length === 0) {
-			return
-		}
-
-		const provided = new Set<string>()
-		for (const entry of entries) {
-			for (const required of entry.requires) {
-				if (!provided.has(required)) {
-					throw new Error(
-						`Plugin capability error: ${entry.name} requires '${required}', but it was not provided by any previous plugin. ` +
-							'Use before/after ordering or register the provider plugin earlier.'
-					)
-				}
-			}
-			for (const capability of entry.provides) {
-				provided.add(capability)
-			}
-		}
 	}
 
 	private shouldEmitRouteDiagnostics(): boolean {
@@ -363,12 +209,6 @@ export class Application {
 			hints.add('Disable strict.requireRoutes for empty modules, or add a controller with at least one route.')
 		}
 
-		if (errorMessage.includes('Plugin ordering error') || errorMessage.includes('Plugin capability error')) {
-			hints.add(
-				'Check plugin order and before/after constraints, then ensure required capabilities are provided earlier.'
-			)
-		}
-
 		return [...hints]
 	}
 
@@ -421,8 +261,6 @@ export class Application {
 		const metadataSnapshot = SnapshotMetadataRepository.fromRootModule(rootModule)
 		const app = new Application(options, metadataSnapshot)
 		const entries = (options.plugins || []).map((entry, index) => app.normalizePluginEntry(entry, index))
-		const orderedEntries = app.resolvePluginExecutionOrder(entries)
-		app.validatePluginCapabilities(orderedEntries)
 		const ctx = app.getContext()
 		const debug = options.debug
 		const debugPlugins = debug === true || (typeof debug === 'object' && debug.plugins)
@@ -431,15 +269,15 @@ export class Application {
 		let strictNoRoutesFailureEmitted = false
 
 		try {
-			if (debugPlugins && orderedEntries.length > 0) {
+			if (debugPlugins && entries.length > 0) {
 				app.logger.emit({
 					level: 'info',
 					category: 'plugins',
-					message: `Plugin order: ${orderedEntries.map(({ name }) => name).join(' -> ')}`
+					message: `Plugin order: ${entries.map(({ name }) => name).join(' -> ')}`
 				})
 			}
 
-			for (const { plugin, preProcessors } of orderedEntries) {
+			for (const { plugin, preProcessors } of entries) {
 				plugin.logger = app.logger
 				for (const fn of preProcessors) {
 					await fn(app, app.hono, ctx)
@@ -492,7 +330,7 @@ export class Application {
 				})
 			}
 
-			for (const { plugin, postProcessors } of orderedEntries) {
+			for (const { plugin, postProcessors } of entries) {
 				if (plugin.afterModulesRegistered) {
 					await plugin.afterModulesRegistered(app, app.hono)
 				}
@@ -508,7 +346,7 @@ export class Application {
 					message: 'Application startup completed',
 					details: {
 						rootModule: rootModule.name,
-						pluginCount: orderedEntries.length,
+						pluginCount: entries.length,
 						routeCount: routes.length,
 						startupDurationMs: Date.now() - startupStartedAt
 					}

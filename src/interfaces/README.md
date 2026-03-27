@@ -44,6 +44,8 @@ interface HonestOptions {
 }
 ```
 
+`plugins` runs each entry in array order; see `PluginEntry` under Plugin System.
+
 #### `LogEvent` and `ILogger`
 
 Structured logging for framework diagnostics: startup, routing, plugins, the pipeline, DI, and errors flow through
@@ -172,9 +174,18 @@ interface IFilter {
 Interface for framework plugins. The framework sets `logger` on the plugin instance before invoking lifecycle hooks, so
 hooks take only `(app, hono)` and use `this.logger` for structured diagnostics.
 
+Optional `meta.name` supplies a default display name for debug output; it is overridden by `name` on a
+`PluginEntryObject` when you wrap the plugin. Otherwise the framework uses the plugin class constructor name, or
+`AnonymousPlugin#n` for plain object plugins.
+
 ```typescript
+interface PluginMeta {
+	name?: string
+}
+
 interface IPlugin {
 	logger?: ILogger
+	meta?: PluginMeta
 	beforeModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 	afterModulesRegistered?: (app: Application, hono: Hono) => void | Promise<void>
 }
@@ -197,6 +208,7 @@ Wrap a plugin with optional `preProcessors` (run before lifecycle hooks) and `po
 ```typescript
 interface PluginEntryObject {
 	plugin: IPlugin | Constructor<IPlugin>
+	name?: string
 	preProcessors?: PluginProcessor[]
 	postProcessors?: PluginProcessor[]
 }
