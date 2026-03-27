@@ -56,6 +56,7 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 [![npm](https://img.shields.io/npm/v/honestjs)](https://www.npmjs.com/package/honestjs)
 [![npm](https://img.shields.io/npm/dm/honestjs)](https://www.npmjs.com/package/honestjs)
 [![Bundle Size](https://img.shields.io/bundlephobia/min/honestjs)](https://bundlephobia.com/result?p=honestjs)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/honestjs)](https://bundlephobia.com/result?p=honestjs)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/honestjs/honest)](https://github.com/honestjs/honest/pulse)
 [![GitHub last commit](https://img.shields.io/github/last-commit/honestjs/honest)](https://github.com/honestjs/honest/commits/main)
 [![Discord badge](https://img.shields.io/discord/1482150663432442026?label=Discord&logo=Discord)](https://discord.gg/g3TUeXbeq)
