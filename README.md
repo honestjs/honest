@@ -50,7 +50,7 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 
 <hr />
 
-<center>
+<div align="center">
 
 [![GitHub](https://img.shields.io/github/license/honestjs/honest)](https://github.com/honestjs/honest/blob/main/LICENSE)
 [![npm](https://img.shields.io/npm/v/honestjs)](https://www.npmjs.com/package/honestjs)
@@ -60,7 +60,7 @@ ultra-fast performance of Hono, giving you the best of both worlds.
 [![GitHub last commit](https://img.shields.io/github/last-commit/honestjs/honest)](https://github.com/honestjs/honest/commits/main)
 [![Discord badge](https://img.shields.io/discord/1482150663432442026?label=Discord&logo=Discord)](https://discord.gg/g3TUeXbeq)
 
-</center>
+</div>
 
 ## Cursor / Agent skills
 
