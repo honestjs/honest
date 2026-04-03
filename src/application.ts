@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { emitStartupGuide as emitStartupGuideLogs } from './application/startup-guide'
+import { normalizePluginEntries } from './application/plugin-entries'
 import { ApplicationContext } from './application-context'
 import { ConsoleLogger } from './loggers'
 import { Container } from './di'
@@ -9,15 +11,12 @@ import type {
 	HonestOptions,
 	IApplicationContext,
 	IMetadataRepository,
-	IPlugin,
-	PluginEntry,
-	PluginProcessor,
 	RouteInfo
 } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
 import { RouteRegistry, SnapshotMetadataRepository, StaticMetadataRepository } from './registries'
 import type { Constructor } from './types'
-import { isConstructor, isObject } from './utils'
+import { isObject } from './utils'
 
 /**
  * Main application class for the Honest framework.
@@ -36,8 +35,6 @@ export class Application {
 	private readonly routeManager: RouteManager
 	private readonly logger: ILogger
 	private readonly options: HonestOptions
-
-	private static readonly DEFAULT_PLUGIN_NAME = 'AnonymousPlugin'
 
 	constructor(options: HonestOptions = {}, metadataRepository: IMetadataRepository = new StaticMetadataRepository()) {
 		this.options = isObject(options) ? options : {}
@@ -92,124 +89,13 @@ export class Application {
 		this.hono.onError(this.options.onError || ErrorHandler.handle())
 	}
 
-	private resolvePlugin(pluginType: Constructor<IPlugin> | IPlugin): IPlugin {
-		if (isConstructor(pluginType)) {
-			return new (pluginType as Constructor<IPlugin>)()
-		}
-		return pluginType as IPlugin
-	}
-
-	private normalizePluginEntry(
-		entry: PluginEntry,
-		index: number
-	): {
-		plugin: IPlugin
-		name: string
-		preProcessors: PluginProcessor[]
-		postProcessors: PluginProcessor[]
-	} {
-		if (entry && typeof entry === 'object' && 'plugin' in entry) {
-			const obj = entry as {
-				plugin: IPlugin | Constructor<IPlugin>
-				name?: string
-				preProcessors?: PluginProcessor[]
-				postProcessors?: PluginProcessor[]
-			}
-			const plugin = this.resolvePlugin(obj.plugin)
-			const name = this.resolvePluginName(plugin, index, obj.name)
-			return {
-				plugin,
-				name,
-				preProcessors: obj.preProcessors ?? [],
-				postProcessors: obj.postProcessors ?? []
-			}
-		}
-		const plugin = this.resolvePlugin(entry as IPlugin | Constructor<IPlugin>)
-		return {
-			plugin,
-			name: this.resolvePluginName(plugin, index),
-			preProcessors: [],
-			postProcessors: []
-		}
-	}
-
-	private resolvePluginName(plugin: IPlugin, index: number, override?: string): string {
-		const resolved = override || plugin.meta?.name || plugin.constructor?.name
-		if (!resolved || resolved === Application.DEFAULT_PLUGIN_NAME) {
-			return `${Application.DEFAULT_PLUGIN_NAME}#${index + 1}`
-		}
-		return resolved
-	}
-
 	private shouldEmitRouteDiagnostics(): boolean {
 		const debug = this.options.debug
 		return debug === true || (typeof debug === 'object' && Boolean(debug.routes))
 	}
 
 	private emitStartupGuide(error: unknown, rootModule: Constructor): void {
-		const startupGuide = this.options.startupGuide
-		if (!startupGuide) {
-			return
-		}
-
-		const verbose = typeof startupGuide === 'object' && Boolean(startupGuide.verbose)
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		const hints = this.createStartupGuideHints(errorMessage)
-
-		this.logger.emit({
-			level: 'warn',
-			category: 'startup',
-			message: 'Startup guide',
-			details: {
-				rootModule: rootModule.name,
-				errorMessage,
-				hints,
-				verbose
-			}
-		})
-
-		if (verbose) {
-			this.logger.emit({
-				level: 'warn',
-				category: 'startup',
-				message: 'Startup guide (verbose)',
-				details: {
-					steps: [
-						'Verify decorators are present for controllers/services used by DI and routing.',
-						"Ensure 'reflect-metadata' is imported once at entry and 'emitDecoratorMetadata' is enabled.",
-						'Enable debug.startup for extra startup diagnostics and timing details.'
-					]
-				}
-			})
-		}
-	}
-
-	private createStartupGuideHints(errorMessage: string): string[] {
-		const hints = new Set<string>()
-
-		hints.add('Check module wiring: root module imports, controllers, and services should be registered correctly.')
-
-		if (errorMessage.includes('not decorated with @Controller()')) {
-			hints.add('Add @Controller() to the class or remove it from module.controllers.')
-		}
-
-		if (errorMessage.includes('has no route handlers')) {
-			hints.add('Add at least one HTTP method decorator such as @Get() or @Post() in the controller.')
-		}
-
-		if (errorMessage.includes('not decorated with @Service()')) {
-			hints.add('Add @Service() to injectable classes used in constructor dependencies.')
-		}
-
-		if (errorMessage.includes('constructor metadata is missing') || errorMessage.includes('reflect-metadata')) {
-			hints.add("Import 'reflect-metadata' in your entry file and enable 'emitDecoratorMetadata' in tsconfig.")
-		}
-
-		if (errorMessage.includes('Strict mode: no routes were registered')) {
-			hints.add('Disable strict.requireRoutes for empty modules, or add a controller with at least one route.')
-		}
-
-		return [...hints]
+		emitStartupGuideLogs(this.logger, this.options.startupGuide, error, rootModule)
 	}
 
 	async register(moduleClass: Constructor): Promise<Application> {
@@ -260,7 +146,7 @@ export class Application {
 		const startupStartedAt = Date.now()
 		const metadataSnapshot = SnapshotMetadataRepository.fromRootModule(rootModule)
 		const app = new Application(options, metadataSnapshot)
-		const entries = (options.plugins || []).map((entry, index) => app.normalizePluginEntry(entry, index))
+		const entries = normalizePluginEntries(options.plugins)
 		const ctx = app.getContext()
 		const debug = options.debug
 		const debugPlugins = debug === true || (typeof debug === 'object' && debug.plugins)
