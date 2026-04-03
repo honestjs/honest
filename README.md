@@ -94,13 +94,13 @@ See [honestjs/skills](https://github.com/honestjs/skills) for details.
 
 ```bash
 bun add -g @honestjs/cli
-honestjs new my-project   # alias: honest, hnjs
+honestjs new my-project -t blank   # alias: honest, hnjs; smallest layout (omit -t for interactive template pick)
 cd my-project
 bun dev
 ```
 
-This creates a new project with a standard structure and config. Use the [website](https://github.com/honestjs/website)
-for full docs.
+See **[Getting Started](https://honestjs.dev/docs/getting-started)** on [honestjs.dev](https://honestjs.dev) for the full
+tutorial. Repo: [website](https://github.com/honestjs/website).
 
 ## Features
 
