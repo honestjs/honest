@@ -230,6 +230,48 @@ describe('Pipeline integration', () => {
 		expect(levels).toEqual(['global', 'controller', 'handler'])
 	})
 
+	test('global middleware runs exactly once and before controller/handler middleware', async () => {
+		const levels: string[] = []
+
+		const GlobalMiddleware: IMiddleware = {
+			async use(_c: Context, next: Next) {
+				levels.push('global')
+				await next()
+			}
+		}
+		const ControllerMiddleware: IMiddleware = {
+			async use(_c: Context, next: Next) {
+				levels.push('controller')
+				await next()
+			}
+		}
+		const HandlerMiddleware: IMiddleware = {
+			async use(_c: Context, next: Next) {
+				levels.push('handler')
+				await next()
+			}
+		}
+
+		@Controller('/mw-levels')
+		@UseMiddleware(ControllerMiddleware)
+		class MwLevelsController {
+			@Get()
+			@UseMiddleware(HandlerMiddleware)
+			index() {
+				return { ok: true }
+			}
+		}
+
+		const testApp = await createTestApplication({
+			controllers: [MwLevelsController],
+			appOptions: { components: { middleware: [GlobalMiddleware] } }
+		})
+
+		const res = await testApp.request('/mw-levels')
+		expect(res.status).toBe(200)
+		expect(levels).toEqual(['global', 'controller', 'handler'])
+	})
+
 	test('pipeline diagnostics emits event when guard rejects in debug mode', async () => {
 		const events: LogEvent[] = []
 		const logger: ILogger = {
