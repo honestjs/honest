@@ -120,8 +120,10 @@ export class ComponentManager {
 		controller: Constructor,
 		handlerName: string | symbol
 	): ((c: Context, next: Next) => Promise<Response | void>)[] {
-		const middlewareItems = this.getComponents('middleware', controller, handlerName)
-		return this.resolveMiddleware(middlewareItems as MiddlewareType[])
+		const handlerKey = `${controller.name}:${String(handlerName)}`
+		const controllerMiddleware = this.metadataRepository.getControllerComponents('middleware', controller)
+		const handlerMiddleware = this.metadataRepository.getHandlerComponents('middleware', handlerKey)
+		return this.resolveMiddleware([...controllerMiddleware, ...handlerMiddleware] as MiddlewareType[])
 	}
 
 	getGlobalMiddleware(): ((c: Context, next: Next) => Promise<Response | void>)[] {
