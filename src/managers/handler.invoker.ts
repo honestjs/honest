@@ -1,4 +1,5 @@
 import type { HandlerInvocationInput } from '../interfaces'
+import { FrameworkError } from '../errors'
 import { isNil, isString } from '../utils'
 
 /**
@@ -24,6 +25,20 @@ export class HandlerInvoker {
 			return context.text(result)
 		}
 
-		return context.json(result)
+		try {
+			return context.json(result)
+		} catch (error) {
+			throw new FrameworkError('Handler return value could not be serialized as JSON.', {
+				status: 500,
+				code: 'RESPONSE_SERIALIZATION_FAILED',
+				category: 'pipeline',
+				remediation:
+					'Return JSON-serializable values from handlers or map custom values in a filter before returning.',
+				details: {
+					handlerResultType: typeof result
+				},
+				cause: error
+			})
+		}
 	}
 }

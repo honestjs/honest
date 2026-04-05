@@ -39,7 +39,7 @@ interface HonestOptions {
 		filters?: FilterType[]
 	}
 	plugins?: PluginEntry[]
-	onError?: (error: Error, context: Context) => Response | Promise<Response>
+	onError?: (error: unknown, context: Context) => Response | Promise<Response>
 	notFound?: (context: Context) => Response | Promise<Response>
 }
 ```

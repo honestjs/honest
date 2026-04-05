@@ -177,7 +177,8 @@ export class ComponentManager {
 
 	// -- Filters --
 
-	async handleException(exception: Error, context: Context): Promise<Response | undefined> {
+	async handleException(exception: unknown, context: Context): Promise<Response | undefined> {
+		const normalizedException = exception instanceof Error ? exception : new Error(String(exception))
 		const controller = context.get(HONEST_PIPELINE_CONTROLLER_KEY) as Constructor | undefined
 		const handlerName = context.get(HONEST_PIPELINE_HANDLER_KEY) as string | undefined
 
@@ -187,7 +188,7 @@ export class ComponentManager {
 				`${controller.name}:${handlerName}`
 			)
 			if (handlerFilters.length > 0) {
-				const response = await this.executeFilters(handlerFilters as FilterType[], exception, context)
+				const response = await this.executeFilters(handlerFilters as FilterType[], normalizedException, context)
 				if (response) return response
 			}
 		}
@@ -195,18 +196,22 @@ export class ComponentManager {
 		if (controller) {
 			const controllerFilters = this.metadataRepository.getControllerComponents('filter', controller)
 			if (controllerFilters.length > 0) {
-				const response = await this.executeFilters(controllerFilters as FilterType[], exception, context)
+				const response = await this.executeFilters(
+					controllerFilters as FilterType[],
+					normalizedException,
+					context
+				)
 				if (response) return response
 			}
 		}
 
 		const globalFilters = Array.from(this.globalComponents.get('filter') || [])
 		if (globalFilters.length > 0) {
-			const response = await this.executeFilters(globalFilters as FilterType[], exception, context)
+			const response = await this.executeFilters(globalFilters as FilterType[], normalizedException, context)
 			if (response) return response
 		}
 
-		const { response, status } = createErrorResponse(exception, context)
+		const { response, status } = createErrorResponse(normalizedException, context)
 		return context.json(response, status)
 	}
 
@@ -240,7 +245,7 @@ export class ComponentManager {
 					}
 				})
 
-				const { response, status } = createErrorResponse(filterError as Error, context)
+				const { response, status } = createErrorResponse(filterError, context)
 				return context.json(response, status)
 			}
 		}

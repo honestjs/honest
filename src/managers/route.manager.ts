@@ -46,8 +46,12 @@ export class RouteManager {
 		this.container = container
 		this.routeRegistry = routeRegistry
 		this.componentManager = componentManager
-		this.parameterResolver = new ParameterResolver(this.componentManager)
 		this.logger = logger
+		this.parameterResolver = new ParameterResolver(
+			this.componentManager,
+			this.logger,
+			Boolean(options.debugPipeline)
+		)
 		this.pipelineExecutor = new PipelineExecutor(
 			this.componentManager,
 			this.parameterResolver,
@@ -272,7 +276,7 @@ export class RouteManager {
 					context: c
 				})
 			} catch (error) {
-				return componentManager.handleException(error as Error, c)
+				return componentManager.handleException(error, c)
 			}
 		}
 

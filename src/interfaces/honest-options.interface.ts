@@ -120,7 +120,7 @@ export interface HonestOptions {
 	/**
 	 * Default exception handler to use when no filter matches
 	 */
-	onError?: (error: Error, context: Context) => Response | Promise<Response>
+	onError?: (error: unknown, context: Context) => Response | Promise<Response>
 
 	/**
 	 * Default not found handler for routes that don't match any pattern

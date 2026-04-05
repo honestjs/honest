@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import type { Context } from 'hono'
 import { Container } from '../di'
-import type { ParameterMetadata } from '../interfaces'
+import type { ILogger, LogEvent, ParameterMetadata } from '../interfaces'
 import type { IPipe } from '../interfaces'
 import { ComponentManager } from './component.manager'
 import { ParameterResolver } from './parameter.resolver'
 
-function makeResolver() {
+function makeResolver(options?: { logger?: ILogger; debugPipeline?: boolean }) {
 	const componentManager = new ComponentManager(new Container())
-	return new ParameterResolver(componentManager)
+	return new ParameterResolver(componentManager, options?.logger, options?.debugPipeline)
 }
 
 describe('ParameterResolver', () => {
@@ -74,5 +74,65 @@ describe('ParameterResolver', () => {
 				context: {} as Context
 			})
 		).rejects.toThrow('Invalid parameter decorator metadata for BrokenController.index')
+	})
+
+	test('emits debug warning for sparse decorated indices', async () => {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+		const resolver = makeResolver({ logger, debugPipeline: true })
+
+		await resolver.resolveArguments({
+			controllerName: 'SparseController',
+			handlerName: 'findOne',
+			handlerArity: 3,
+			handlerParams: [
+				{ index: 0, name: 'query', data: 'q', factory: async () => 'a' },
+				{ index: 2, name: 'param', data: 'id', factory: async () => 'b' }
+			],
+			handlerPipes: [],
+			context: {} as Context
+		})
+
+		expect(
+			events.some(
+				(event) =>
+					event.level === 'warn' &&
+					event.category === 'pipeline' &&
+					event.message.includes('Potential parameter binding mismatch') &&
+					(event.details as Record<string, unknown>).handlerArity === 3
+			)
+		).toBe(true)
+	})
+
+	test('emits debug warning when decorator index exceeds handler arity', async () => {
+		const events: LogEvent[] = []
+		const logger: ILogger = {
+			emit(event) {
+				events.push(event)
+			}
+		}
+		const resolver = makeResolver({ logger, debugPipeline: true })
+
+		await resolver.resolveArguments({
+			controllerName: 'OutOfRangeController',
+			handlerName: 'index',
+			handlerArity: 1,
+			handlerParams: [{ index: 2, name: 'query', data: 'q', factory: async () => 'a' }],
+			handlerPipes: [],
+			context: {} as Context
+		})
+
+		expect(
+			events.some(
+				(event) =>
+					event.level === 'warn' &&
+					event.category === 'pipeline' &&
+					(event.details as Record<string, unknown>).maxDecoratorIndex === 2
+			)
+		).toBe(true)
 	})
 })
