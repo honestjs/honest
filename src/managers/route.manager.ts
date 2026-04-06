@@ -6,7 +6,6 @@ import { ComponentManager } from './component.manager'
 import { HandlerInvoker } from './handler.invoker'
 import { ParameterResolver } from './parameter.resolver'
 import { PipelineExecutor } from './pipeline.executor'
-import { StaticMetadataRepository } from '../registries'
 import { RouteRegistry } from '../registries/route.registry'
 import type { Constructor } from '../types'
 import { isNil, isString, normalizePath } from '../utils'
@@ -34,7 +33,7 @@ export class RouteManager {
 		container: DiContainer,
 		routeRegistry: RouteRegistry,
 		componentManager: ComponentManager,
-		metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
+		metadataRepository: IMetadataRepository,
 		logger: ILogger = new NoopLogger(),
 		options: {
 			prefix?: string

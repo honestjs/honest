@@ -3,16 +3,32 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { ComponentManager } from './component.manager'
 import { MetadataRegistry } from '../registries'
 import { Container } from '../di/container'
-import type { IFilter, IGuard, IMiddleware, IPipe } from '../interfaces'
+import type { IFilter, IGuard, IMetadataRepository, IMiddleware, IPipe } from '../interfaces'
 import { Module, Service } from '../decorators'
 
 afterEach(() => {
 	MetadataRegistry.clear()
 })
 
+/**
+ * Live adapter for tests that write to MetadataRegistry and read back immediately.
+ */
+const liveMetadataRepository: IMetadataRepository = {
+	hasController: (c) => MetadataRegistry.hasController(c),
+	getControllerPath: (c) => MetadataRegistry.getControllerPath(c),
+	getControllerOptions: (c) => MetadataRegistry.getControllerOptions(c),
+	getRoutes: (c) => MetadataRegistry.getRoutes(c),
+	getParameters: (c) => MetadataRegistry.getParameters(c),
+	getContextIndices: (c) => MetadataRegistry.getContextIndices(c),
+	getModuleOptions: (m) => MetadataRegistry.getModuleOptions(m),
+	getControllerComponents: (type, controller) => MetadataRegistry.getController(type, controller) as any,
+	getHandlerComponents: (type, controller, handlerName) =>
+		MetadataRegistry.getHandler(type, controller, handlerName) as any
+}
+
 function makeManager() {
 	const container = new Container()
-	return new ComponentManager(container)
+	return new ComponentManager(container, liveMetadataRepository)
 }
 
 const fakeMiddleware: IMiddleware = {
@@ -72,7 +88,7 @@ describe('ComponentManager', () => {
 
 			class FakeCtrl {}
 			MetadataRegistry.registerController('guard', FakeCtrl, ctrlGuard)
-			MetadataRegistry.registerHandler('guard', 'FakeCtrl:index', handlerGuard)
+			MetadataRegistry.registerHandler('guard', FakeCtrl, 'index', handlerGuard)
 
 			const result = cm.getComponents('guard', FakeCtrl, 'index')
 			expect(result).toEqual([globalGuard, ctrlGuard, handlerGuard])
@@ -89,7 +105,7 @@ describe('ComponentManager', () => {
 
 		test('handles classes via DI', () => {
 			const container = new Container()
-			const cm = new ComponentManager(container)
+			const cm = new ComponentManager(container, liveMetadataRepository)
 			@Service()
 			class TestMiddleware implements IMiddleware {
 				async use(_c: any, next: any) {
@@ -110,7 +126,7 @@ describe('ComponentManager', () => {
 
 		test('handles classes via DI', () => {
 			const container = new Container()
-			const cm = new ComponentManager(container)
+			const cm = new ComponentManager(container, liveMetadataRepository)
 			@Service()
 			class TestGuard implements IGuard {
 				canActivate(_context: any) {

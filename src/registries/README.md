@@ -26,13 +26,11 @@ The main metadata registry that stores all decorator and component information:
 
 ### `metadata.repository.ts`
 
-Metadata access adapters used by runtime managers:
+- **MetadataRepository** - Captures an immutable per-app metadata snapshot from a root module
 
-- **StaticMetadataRepository** - Reads live data from `MetadataRegistry`
-- **SnapshotMetadataRepository** - Captures immutable per-app metadata from a root module
-
-`Application.create()` uses a snapshot repository at startup so running apps are isolated from metadata mutations that
-occur later in process lifetime.
+`Application.create()` builds a `MetadataRepository` at startup so running apps are isolated from metadata mutations
+that occur later in process lifetime. The repository reads directly from the static `MetadataRegistry` during
+construction, then serves its own deep-copied data at runtime.
 
 ### `route.registry.ts`
 
@@ -131,14 +129,15 @@ MetadataRegistry.registerController('guard', AdminController, AdminGuard)
 
 #### Handler Components
 
-Components applied to specific methods:
+Components applied to specific methods. Handler-level components are keyed by the controller constructor and handler
+name (not string-based keys), preventing collisions between controllers with the same class name:
 
 ```typescript
 // Register handler-level pipes
-MetadataRegistry.registerHandler('pipe', 'UsersController:getUser', TransformPipe)
+MetadataRegistry.registerHandler('pipe', UsersController, 'getUser', TransformPipe)
 
 // Register handler-level filters
-MetadataRegistry.registerHandler('filter', 'UsersController:createUser', ValidationFilter)
+MetadataRegistry.registerHandler('filter', UsersController, 'createUser', ValidationFilter)
 ```
 
 ### Service Registration
@@ -175,7 +174,7 @@ const options = MetadataRegistry.getModuleOptions(AppModule)
 ## Route Registry Features
 
 `RouteRegistry` is **instance-based**: each `Application` has its own registry. Use `app.getRoutes()` to get the list of
-routes; the registry’s methods (`getRoutes()`, `getRoutesByController()`, etc.) are instance methods on that registry.
+routes; the registry's methods (`getRoutes()`, `getRoutesByController()`, etc.) are instance methods on that registry.
 
 ### Route Information Storage
 
@@ -257,7 +256,7 @@ const adminRoutes = routes.filter((r) => /\/admin\//.test(r.fullPath))
 ```typescript
 // Controller- and handler-level components (via MetadataRegistry)
 MetadataRegistry.registerController('guard', AdminController, AdminGuard)
-MetadataRegistry.registerHandler('pipe', 'UsersController:createUser', ValidationPipe)
+MetadataRegistry.registerHandler('pipe', UsersController, 'createUser', ValidationPipe)
 
 // Global components: pass to Application.create(Module, { components: { middleware: [CustomMiddleware] } })
 // or use ComponentManager.registerGlobal() when you have the manager instance
@@ -294,10 +293,10 @@ console.log(
 
 ## Framework Integration
 
-Registries and repositories are central to the framework architecture:
+Registries and the metadata repository are central to the framework architecture:
 
-- **Decorator system** - Stores metadata from all decorators
-- **Metadata repositories** - Provide runtime metadata access with static and snapshot strategies
+- **Decorator system** - Stores metadata from all decorators in the static MetadataRegistry
+- **MetadataRepository** - Provides immutable per-app metadata snapshots for runtime isolation
 - **Route management** - Provides route information for registration
 - **Component system** - Manages component registrations and retrieval
 - **Dependency injection** - Tracks service registrations

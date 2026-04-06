@@ -11,53 +11,11 @@ import { MetadataRegistry } from './metadata.registry'
 import type { Constructor } from '../types'
 
 /**
- * Adapter that exposes MetadataRegistry through the runtime repository contract.
+ * Immutable metadata repository for a single Application instance.
+ * Captures a deep copy of all metadata reachable from a root module at creation time,
+ * isolating the application from later mutations to the static MetadataRegistry.
  */
-export class StaticMetadataRepository implements IMetadataRepository {
-	hasController(controller: Constructor): boolean {
-		return MetadataRegistry.hasController(controller)
-	}
-
-	getControllerPath(controller: Constructor): string {
-		return MetadataRegistry.getControllerPath(controller)
-	}
-
-	getControllerOptions(controller: Constructor) {
-		return MetadataRegistry.getControllerOptions(controller)
-	}
-
-	getRoutes(controller: Constructor) {
-		return MetadataRegistry.getRoutes(controller)
-	}
-
-	getParameters(controller: Constructor) {
-		return MetadataRegistry.getParameters(controller)
-	}
-
-	getContextIndices(controller: Constructor) {
-		return MetadataRegistry.getContextIndices(controller)
-	}
-
-	getModuleOptions(module: Constructor) {
-		return MetadataRegistry.getModuleOptions(module)
-	}
-
-	getControllerComponents<T extends MetadataComponentType>(
-		type: T,
-		controller: Constructor
-	): MetadataComponentTypeMap[T][] {
-		return MetadataRegistry.getController(type, controller) as MetadataComponentTypeMap[T][]
-	}
-
-	getHandlerComponents<T extends MetadataComponentType>(type: T, handlerKey: string): MetadataComponentTypeMap[T][] {
-		return MetadataRegistry.getHandler(type, handlerKey) as MetadataComponentTypeMap[T][]
-	}
-}
-
-/**
- * Immutable metadata repository snapshot for a single Application instance.
- */
-export class SnapshotMetadataRepository implements IMetadataRepository {
+export class MetadataRepository implements IMetadataRepository {
 	private readonly controllerPaths = new Map<Constructor, string>()
 	private readonly controllerOptions = new Map<Constructor, ControllerOptions>()
 	private readonly routes = new Map<Constructor, RouteDefinition[]>()
@@ -70,19 +28,19 @@ export class SnapshotMetadataRepository implements IMetadataRepository {
 		['pipe', new Map<Constructor, unknown[]>()],
 		['filter', new Map<Constructor, unknown[]>()]
 	])
-	private readonly handlerComponents = new Map<MetadataComponentType, Map<string, unknown[]>>([
-		['middleware', new Map<string, unknown[]>()],
-		['guard', new Map<string, unknown[]>()],
-		['pipe', new Map<string, unknown[]>()],
-		['filter', new Map<string, unknown[]>()]
+	private readonly handlerComponents = new Map<
+		MetadataComponentType,
+		Map<Constructor, Map<string | symbol, unknown[]>>
+	>([
+		['middleware', new Map()],
+		['guard', new Map()],
+		['pipe', new Map()],
+		['filter', new Map()]
 	])
 
-	static fromRootModule(
-		rootModule: Constructor,
-		source: IMetadataRepository = new StaticMetadataRepository()
-	): SnapshotMetadataRepository {
-		const snapshot = new SnapshotMetadataRepository()
-		snapshot.captureModuleGraph(rootModule, source)
+	static fromRootModule(rootModule: Constructor): MetadataRepository {
+		const snapshot = new MetadataRepository()
+		snapshot.captureModuleGraph(rootModule)
 		return snapshot
 	}
 
@@ -146,13 +104,21 @@ export class SnapshotMetadataRepository implements IMetadataRepository {
 		return [...components]
 	}
 
-	getHandlerComponents<T extends MetadataComponentType>(type: T, handlerKey: string): MetadataComponentTypeMap[T][] {
-		const map = this.handlerComponents.get(type)!
-		const components = (map.get(handlerKey) || []) as MetadataComponentTypeMap[T][]
+	getHandlerComponents<T extends MetadataComponentType>(
+		type: T,
+		controller: Constructor,
+		handlerName: string | symbol
+	): MetadataComponentTypeMap[T][] {
+		const typeMap = this.handlerComponents.get(type)!
+		const controllerMap = typeMap.get(controller)
+		if (!controllerMap) {
+			return []
+		}
+		const components = (controllerMap.get(handlerName) || []) as MetadataComponentTypeMap[T][]
 		return [...components]
 	}
 
-	private captureModuleGraph(rootModule: Constructor, source: IMetadataRepository): void {
+	private captureModuleGraph(rootModule: Constructor): void {
 		const visitedModules = new Set<Constructor>()
 		const controllers = new Set<Constructor>()
 
@@ -162,7 +128,7 @@ export class SnapshotMetadataRepository implements IMetadataRepository {
 			}
 			visitedModules.add(moduleClass)
 
-			const moduleOptions = source.getModuleOptions(moduleClass)
+			const moduleOptions = MetadataRegistry.getModuleOptions(moduleClass)
 			if (!moduleOptions) {
 				return
 			}
@@ -186,22 +152,22 @@ export class SnapshotMetadataRepository implements IMetadataRepository {
 		visitModule(rootModule)
 
 		for (const controller of controllers) {
-			this.captureController(controller, source)
+			this.captureController(controller)
 		}
 	}
 
-	private captureController(controller: Constructor, source: IMetadataRepository): void {
-		if (!source.hasController(controller)) {
+	private captureController(controller: Constructor): void {
+		if (!MetadataRegistry.hasController(controller)) {
 			return
 		}
 
-		this.controllerPaths.set(controller, source.getControllerPath(controller) || '')
-		this.controllerOptions.set(controller, { ...source.getControllerOptions(controller) })
+		this.controllerPaths.set(controller, MetadataRegistry.getControllerPath(controller) || '')
+		this.controllerOptions.set(controller, { ...MetadataRegistry.getControllerOptions(controller) })
 
-		const routes = (source.getRoutes(controller) || []).map((route) => this.cloneRouteDefinition(route))
+		const routes = (MetadataRegistry.getRoutes(controller) || []).map((route) => this.cloneRouteDefinition(route))
 		this.routes.set(controller, routes)
 
-		const parameters = source.getParameters(controller)
+		const parameters = MetadataRegistry.getParameters(controller)
 		const parameterSnapshot = new Map<string | symbol, ParameterMetadata[]>()
 		for (const [handlerName, entries] of parameters.entries()) {
 			parameterSnapshot.set(
@@ -211,18 +177,23 @@ export class SnapshotMetadataRepository implements IMetadataRepository {
 		}
 		this.parameters.set(controller, parameterSnapshot)
 
-		this.contextIndices.set(controller, new Map(source.getContextIndices(controller) || new Map()))
+		this.contextIndices.set(controller, new Map(MetadataRegistry.getContextIndices(controller) || new Map()))
 
 		for (const type of ['middleware', 'guard', 'pipe', 'filter'] as const) {
 			const controllerMap = this.controllerComponents.get(type)!
-			controllerMap.set(controller, [...(source.getControllerComponents(type, controller) || [])])
+			controllerMap.set(controller, [...(MetadataRegistry.getController(type, controller) || [])])
 		}
 
 		for (const route of routes) {
-			const handlerKey = `${controller.name}:${String(route.handlerName)}`
 			for (const type of ['middleware', 'guard', 'pipe', 'filter'] as const) {
-				const handlerMap = this.handlerComponents.get(type)!
-				handlerMap.set(handlerKey, [...(source.getHandlerComponents(type, handlerKey) || [])])
+				const typeMap = this.handlerComponents.get(type)!
+				if (!typeMap.has(controller)) {
+					typeMap.set(controller, new Map())
+				}
+				const controllerHandlers = typeMap.get(controller)!
+				controllerHandlers.set(route.handlerName, [
+					...MetadataRegistry.getHandler(type, controller, route.handlerName)
+				])
 			}
 		}
 	}

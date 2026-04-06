@@ -86,12 +86,16 @@ export class MetadataRegistry {
 	/**
 	 * Registry for handler-level components
 	 * Components registered here apply to specific route handlers
+	 * Keyed by controller constructor then handler name for collision-safe lookups
 	 */
-	private static readonly handler = new Map<ComponentType, Map<string, ComponentInstance[]>>([
-		['middleware', new Map<string, MiddlewareType[]>()],
-		['guard', new Map<string, GuardType[]>()],
-		['pipe', new Map<string, PipeType[]>()],
-		['filter', new Map<string, FilterType[]>()]
+	private static readonly handler = new Map<
+		ComponentType,
+		Map<Constructor, Map<string | symbol, ComponentInstance[]>>
+	>([
+		['middleware', new Map()],
+		['guard', new Map()],
+		['pipe', new Map()],
+		['filter', new Map()]
 	])
 
 	/**
@@ -244,20 +248,37 @@ export class MetadataRegistry {
 	/**
 	 * Register a component at the handler level
 	 */
-	static registerHandler<T extends ComponentType>(type: T, handlerKey: string, component: ComponentTypeMap[T]): void {
+	static registerHandler<T extends ComponentType>(
+		type: T,
+		controller: Constructor,
+		handlerName: string | symbol,
+		component: ComponentTypeMap[T]
+	): void {
 		const typeMap = this.handler.get(type)!
-		if (!typeMap.has(handlerKey)) {
-			typeMap.set(handlerKey, [])
+		if (!typeMap.has(controller)) {
+			typeMap.set(controller, new Map())
 		}
-		typeMap.get(handlerKey)!.push(component as unknown as ComponentInstance)
+		const controllerMap = typeMap.get(controller)!
+		if (!controllerMap.has(handlerName)) {
+			controllerMap.set(handlerName, [])
+		}
+		controllerMap.get(handlerName)!.push(component as unknown as ComponentInstance)
 	}
 
 	/**
 	 * Get all handler-level components of a specific type for a handler
 	 */
-	static getHandler<T extends ComponentType>(type: T, handlerKey: string): ComponentTypeMap[T][] {
+	static getHandler<T extends ComponentType>(
+		type: T,
+		controller: Constructor,
+		handlerName: string | symbol
+	): ComponentTypeMap[T][] {
 		const typeMap = this.handler.get(type)!
-		return (typeMap.get(handlerKey) || []) as unknown as ComponentTypeMap[T][]
+		const controllerMap = typeMap.get(controller)
+		if (!controllerMap) {
+			return [] as unknown as ComponentTypeMap[T][]
+		}
+		return (controllerMap.get(handlerName) || []) as unknown as ComponentTypeMap[T][]
 	}
 
 	/**
@@ -265,8 +286,11 @@ export class MetadataRegistry {
 	 * Does not remove decorator-defined routes, controllers, or modules.
 	 */
 	static clearHandlerComponents(): void {
-		for (const map of this.handler.values()) {
-			map.clear()
+		for (const typeMap of this.handler.values()) {
+			for (const controllerMap of typeMap.values()) {
+				controllerMap.clear()
+			}
+			typeMap.clear()
 		}
 	}
 
@@ -288,8 +312,11 @@ export class MetadataRegistry {
 			map.clear()
 		}
 
-		for (const map of this.handler.values()) {
-			map.clear()
+		for (const typeMap of this.handler.values()) {
+			for (const controllerMap of typeMap.values()) {
+				controllerMap.clear()
+			}
+			typeMap.clear()
 		}
 	}
 }

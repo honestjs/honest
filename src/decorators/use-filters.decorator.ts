@@ -11,8 +11,9 @@ export function UseFilters(...filters: FilterType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
 			const controllerClass = target.constructor as Constructor
-			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
-			filters.forEach((filter) => MetadataRegistry.registerHandler('filter', handlerKey, filter))
+			filters.forEach((filter) =>
+				MetadataRegistry.registerHandler('filter', controllerClass, propertyKey, filter)
+			)
 		} else {
 			filters.forEach((filter) => MetadataRegistry.registerController('filter', target as Constructor, filter))
 		}

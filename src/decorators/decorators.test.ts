@@ -141,7 +141,7 @@ describe('@UseGuards', () => {
 			index() {}
 		}
 		void Ctrl
-		expect(MetadataRegistry.getHandler('guard', 'Ctrl:index')).toEqual([fakeGuard])
+		expect(MetadataRegistry.getHandler('guard', Ctrl, 'index')).toEqual([fakeGuard])
 	})
 })
 
@@ -160,7 +160,7 @@ describe('@UsePipes', () => {
 			index() {}
 		}
 		void Ctrl
-		expect(MetadataRegistry.getHandler('pipe', 'Ctrl:index')).toEqual([fakePipe])
+		expect(MetadataRegistry.getHandler('pipe', Ctrl, 'index')).toEqual([fakePipe])
 	})
 })
 
@@ -179,7 +179,7 @@ describe('@UseFilters', () => {
 			index() {}
 		}
 		void Ctrl
-		expect(MetadataRegistry.getHandler('filter', 'Ctrl:index')).toEqual([fakeFilter])
+		expect(MetadataRegistry.getHandler('filter', Ctrl, 'index')).toEqual([fakeFilter])
 	})
 })
 
@@ -198,6 +198,6 @@ describe('@UseMiddleware', () => {
 			index() {}
 		}
 		void Ctrl
-		expect(MetadataRegistry.getHandler('middleware', 'Ctrl:index')).toEqual([fakeMw])
+		expect(MetadataRegistry.getHandler('middleware', Ctrl, 'index')).toEqual([fakeMw])
 	})
 })

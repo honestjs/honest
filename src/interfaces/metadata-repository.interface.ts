@@ -32,5 +32,9 @@ export interface IMetadataRepository {
 		type: T,
 		controller: Constructor
 	): MetadataComponentTypeMap[T][]
-	getHandlerComponents<T extends MetadataComponentType>(type: T, handlerKey: string): MetadataComponentTypeMap[T][]
+	getHandlerComponents<T extends MetadataComponentType>(
+		type: T,
+		controller: Constructor,
+		handlerName: string | symbol
+	): MetadataComponentTypeMap[T][]
 }

@@ -17,7 +17,6 @@ import type {
 } from '../interfaces'
 import { NoopLogger } from '../loggers'
 import { type ComponentType, type ComponentTypeMap } from '../registries'
-import { StaticMetadataRepository } from '../registries'
 import type { Constructor } from '../types'
 import { isObject } from '../utils'
 
@@ -41,7 +40,7 @@ export class ComponentManager {
 
 	constructor(
 		private readonly container: DiContainer,
-		private readonly metadataRepository: IMetadataRepository = new StaticMetadataRepository(),
+		private readonly metadataRepository: IMetadataRepository,
 		private readonly logger: ILogger = new NoopLogger()
 	) {}
 
@@ -94,9 +93,7 @@ export class ComponentManager {
 		controller: Constructor,
 		handlerName: string | symbol
 	): ComponentTypeMap[T][] {
-		const handlerKey = `${controller.name}:${String(handlerName)}`
-
-		const handlerComponents = this.metadataRepository.getHandlerComponents(type, handlerKey)
+		const handlerComponents = this.metadataRepository.getHandlerComponents(type, controller, handlerName)
 		const controllerComponents = this.metadataRepository.getControllerComponents(type, controller)
 		const globalComponents = Array.from(this.globalComponents.get(type) || [])
 
@@ -120,9 +117,8 @@ export class ComponentManager {
 		controller: Constructor,
 		handlerName: string | symbol
 	): ((c: Context, next: Next) => Promise<Response | void>)[] {
-		const handlerKey = `${controller.name}:${String(handlerName)}`
 		const controllerMiddleware = this.metadataRepository.getControllerComponents('middleware', controller)
-		const handlerMiddleware = this.metadataRepository.getHandlerComponents('middleware', handlerKey)
+		const handlerMiddleware = this.metadataRepository.getHandlerComponents('middleware', controller, handlerName)
 		return this.resolveMiddleware([...controllerMiddleware, ...handlerMiddleware] as MiddlewareType[])
 	}
 
@@ -183,10 +179,7 @@ export class ComponentManager {
 		const handlerName = context.get(HONEST_PIPELINE_HANDLER_KEY) as string | undefined
 
 		if (controller && handlerName) {
-			const handlerFilters = this.metadataRepository.getHandlerComponents(
-				'filter',
-				`${controller.name}:${handlerName}`
-			)
+			const handlerFilters = this.metadataRepository.getHandlerComponents('filter', controller, handlerName)
 			if (handlerFilters.length > 0) {
 				const response = await this.executeFilters(handlerFilters as FilterType[], normalizedException, context)
 				if (response) return response

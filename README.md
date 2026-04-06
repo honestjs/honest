@@ -99,8 +99,8 @@ cd my-project
 bun dev
 ```
 
-See **[Getting Started](https://honestjs.dev/docs/getting-started)** on [honestjs.dev](https://honestjs.dev) for the full
-tutorial. Repo: [website](https://github.com/honestjs/website).
+See **[Getting Started](https://honestjs.dev/docs/getting-started)** on [honestjs.dev](https://honestjs.dev) for the
+full tutorial. Repo: [website](https://github.com/honestjs/website).
 
 ## Features
 

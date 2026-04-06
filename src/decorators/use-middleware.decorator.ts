@@ -12,8 +12,7 @@ export function UseMiddleware(...middleware: MiddlewareType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
 			const controllerClass = target.constructor as Constructor
-			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
-			middleware.forEach((mw) => MetadataRegistry.registerHandler('middleware', handlerKey, mw))
+			middleware.forEach((mw) => MetadataRegistry.registerHandler('middleware', controllerClass, propertyKey, mw))
 		} else {
 			middleware.forEach((mw) => MetadataRegistry.registerController('middleware', target as Constructor, mw))
 		}

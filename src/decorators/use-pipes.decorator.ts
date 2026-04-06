@@ -12,8 +12,7 @@ export function UsePipes(...pipes: PipeType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
 			const controllerClass = target.constructor as Constructor
-			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
-			pipes.forEach((pipe) => MetadataRegistry.registerHandler('pipe', handlerKey, pipe))
+			pipes.forEach((pipe) => MetadataRegistry.registerHandler('pipe', controllerClass, propertyKey, pipe))
 		} else {
 			pipes.forEach((pipe) => MetadataRegistry.registerController('pipe', target as Constructor, pipe))
 		}

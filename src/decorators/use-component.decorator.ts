@@ -13,8 +13,9 @@ export function UseComponent<T extends ComponentType>(type: T, ...components: Co
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
 			const controllerClass = target.constructor as Constructor
-			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
-			components.forEach((component) => MetadataRegistry.registerHandler(type, handlerKey, component))
+			components.forEach((component) =>
+				MetadataRegistry.registerHandler(type, controllerClass, propertyKey, component)
+			)
 		} else {
 			components.forEach((component) =>
 				MetadataRegistry.registerController(type, target as Constructor, component)

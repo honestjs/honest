@@ -1,13 +1,27 @@
 import { describe, expect, test } from 'bun:test'
 import type { Context } from 'hono'
 import { Container } from '../di'
-import type { ILogger, LogEvent, ParameterMetadata } from '../interfaces'
+import type { ILogger, IMetadataRepository, LogEvent, ParameterMetadata } from '../interfaces'
 import type { IPipe } from '../interfaces'
+import { MetadataRegistry } from '../registries'
 import { ComponentManager } from './component.manager'
 import { ParameterResolver } from './parameter.resolver'
 
+const liveMetadataRepository: IMetadataRepository = {
+	hasController: (c) => MetadataRegistry.hasController(c),
+	getControllerPath: (c) => MetadataRegistry.getControllerPath(c),
+	getControllerOptions: (c) => MetadataRegistry.getControllerOptions(c),
+	getRoutes: (c) => MetadataRegistry.getRoutes(c),
+	getParameters: (c) => MetadataRegistry.getParameters(c),
+	getContextIndices: (c) => MetadataRegistry.getContextIndices(c),
+	getModuleOptions: (m) => MetadataRegistry.getModuleOptions(m),
+	getControllerComponents: (type, controller) => MetadataRegistry.getController(type, controller) as any,
+	getHandlerComponents: (type, controller, handlerName) =>
+		MetadataRegistry.getHandler(type, controller, handlerName) as any
+}
+
 function makeResolver(options?: { logger?: ILogger; debugPipeline?: boolean }) {
-	const componentManager = new ComponentManager(new Container())
+	const componentManager = new ComponentManager(new Container(), liveMetadataRepository)
 	return new ParameterResolver(componentManager, options?.logger, options?.debugPipeline)
 }
 

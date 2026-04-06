@@ -12,8 +12,7 @@ export function UseGuards(...guards: GuardType[]) {
 	return (target: Constructor | object, propertyKey?: string | symbol): void => {
 		if (propertyKey) {
 			const controllerClass = target.constructor as Constructor
-			const handlerKey = `${controllerClass.name}:${String(propertyKey)}`
-			guards.forEach((guard) => MetadataRegistry.registerHandler('guard', handlerKey, guard))
+			guards.forEach((guard) => MetadataRegistry.registerHandler('guard', controllerClass, propertyKey, guard))
 		} else {
 			guards.forEach((guard) => MetadataRegistry.registerController('guard', target as Constructor, guard))
 		}

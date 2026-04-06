@@ -14,7 +14,7 @@ import type {
 	RouteInfo
 } from './interfaces'
 import { ComponentManager, RouteManager } from './managers'
-import { RouteRegistry, SnapshotMetadataRepository, StaticMetadataRepository } from './registries'
+import { MetadataRepository, RouteRegistry } from './registries'
 import type { Constructor } from './types'
 import { isObject } from './utils'
 
@@ -36,7 +36,7 @@ export class Application {
 	private readonly logger: ILogger
 	private readonly options: HonestOptions
 
-	constructor(options: HonestOptions = {}, metadataRepository: IMetadataRepository = new StaticMetadataRepository()) {
+	constructor(options: HonestOptions = {}, metadataRepository: IMetadataRepository) {
 		this.options = isObject(options) ? options : {}
 
 		const debugPipeline =
@@ -144,7 +144,7 @@ export class Application {
 		options: HonestOptions = {}
 	): Promise<{ app: Application; hono: Hono }> {
 		const startupStartedAt = Date.now()
-		const metadataSnapshot = SnapshotMetadataRepository.fromRootModule(rootModule)
+		const metadataSnapshot = MetadataRepository.fromRootModule(rootModule)
 		const app = new Application(options, metadataSnapshot)
 		const entries = normalizePluginEntries(options.plugins)
 		const ctx = app.getContext()

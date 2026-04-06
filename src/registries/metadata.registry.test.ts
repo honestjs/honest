@@ -136,24 +136,29 @@ describe('MetadataRegistry', () => {
 
 	describe('component registration — handler level', () => {
 		test('registerHandler / getHandler round-trips', () => {
-			MetadataRegistry.registerHandler('middleware', 'Ctrl:index', fakeMiddleware as any)
-			expect(MetadataRegistry.getHandler('middleware', 'Ctrl:index')).toEqual([fakeMiddleware])
+			MetadataRegistry.registerHandler('middleware', FakeController, 'index', fakeMiddleware as any)
+			expect(MetadataRegistry.getHandler('middleware', FakeController, 'index')).toEqual([fakeMiddleware])
 		})
 
-		test('getHandler returns empty array for unregistered key', () => {
-			expect(MetadataRegistry.getHandler('guard', 'Unknown:method')).toEqual([])
+		test('getHandler returns empty array for unregistered controller', () => {
+			expect(MetadataRegistry.getHandler('guard', FakeController, 'method')).toEqual([])
+		})
+
+		test('getHandler returns empty array for unregistered handler name', () => {
+			MetadataRegistry.registerHandler('guard', FakeController, 'index', fakeGuard as any)
+			expect(MetadataRegistry.getHandler('guard', FakeController, 'other')).toEqual([])
 		})
 	})
 
 	describe('clearHandlerComponents()', () => {
 		test('clears handler map without removing controller routes', () => {
 			MetadataRegistry.addRoute(FakeController, { path: '/', method: 'GET', handlerName: 'x' })
-			MetadataRegistry.registerHandler('filter', 'Ctrl:index', fakeFilter as any)
+			MetadataRegistry.registerHandler('filter', FakeController, 'index', fakeFilter as any)
 
 			MetadataRegistry.clearHandlerComponents()
 
 			expect(MetadataRegistry.getRoutes(FakeController).length).toBe(1)
-			expect(MetadataRegistry.getHandler('filter', 'Ctrl:index')).toEqual([])
+			expect(MetadataRegistry.getHandler('filter', FakeController, 'index')).toEqual([])
 		})
 	})
 
@@ -167,7 +172,7 @@ describe('MetadataRegistry', () => {
 			MetadataRegistry.setParameterMap(FakeController, new Map())
 			MetadataRegistry.setContextIndices(FakeController, new Map())
 			MetadataRegistry.registerController('guard', FakeController, fakeGuard as any)
-			MetadataRegistry.registerHandler('pipe', 'k', fakePipe as any)
+			MetadataRegistry.registerHandler('pipe', FakeController, 'k', fakePipe as any)
 
 			MetadataRegistry.clear()
 
@@ -176,7 +181,7 @@ describe('MetadataRegistry', () => {
 			expect(MetadataRegistry.isService(FakeService)).toBe(false)
 			expect(MetadataRegistry.getModuleOptions(FakeModule)).toBeUndefined()
 			expect(MetadataRegistry.getController('guard', FakeController)).toEqual([])
-			expect(MetadataRegistry.getHandler('pipe', 'k')).toEqual([])
+			expect(MetadataRegistry.getHandler('pipe', FakeController, 'k')).toEqual([])
 		})
 	})
 })
