@@ -94,13 +94,17 @@ See [honestjs/skills](https://github.com/honestjs/skills) for details.
 
 ```bash
 bun add -g @honestjs/cli
-honestjs new my-project -t blank   # alias: honest, hnjs; smallest layout (omit -t for interactive template pick)
+honestjs new my-project    # alias: honest, hnjs; interactive template picker
 cd my-project
 bun dev
 ```
 
+Templates: **blank** (minimal), **barebone** (modules + services — best for APIs), **mvc** (full-stack with Hono JSX
+views). Use `-t barebone -y` to skip prompts.
+
 See **[Getting Started](https://honestjs.dev/docs/getting-started)** on [honestjs.dev](https://honestjs.dev) for the
-full tutorial. Repo: [website](https://github.com/honestjs/website).
+full tutorial, and **[FAQ](https://honestjs.dev/docs/faq)** /
+**[Troubleshooting](https://honestjs.dev/docs/troubleshooting)** for common questions and edge cases.
 
 ## Features
 
@@ -198,7 +202,7 @@ export default hono
 ```
 
 Controllers, services, and modules are wired by decorators; use **guards** for auth, **pipes** for validation, and
-**filters** for error handling. See the [documentation](https://github.com/honestjs/website) for details.
+**filters** for error handling. See the [documentation](https://honestjs.dev/docs/overview) for details.
 
 ## Runtime Metadata Isolation
 
