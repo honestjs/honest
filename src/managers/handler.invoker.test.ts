@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Context } from 'hono'
-import { FrameworkError } from '../errors'
+import type { FrameworkError } from '../errors'
 import { HandlerInvoker } from './handler.invoker'
 
 function createContextStub() {
@@ -73,6 +73,11 @@ describe('HandlerInvoker', () => {
 
 	test('throws FrameworkError for BigInt response payload', async () => {
 		const invoker = new HandlerInvoker()
+		const expectedError: Partial<FrameworkError> = {
+			name: 'FrameworkError',
+			code: 'RESPONSE_SERIALIZATION_FAILED',
+			status: 500
+		}
 
 		await expect(
 			invoker.invoke({
@@ -80,17 +85,18 @@ describe('HandlerInvoker', () => {
 				args: [],
 				context: createContextStub()
 			})
-		).rejects.toMatchObject<Partial<FrameworkError>>({
-			name: 'FrameworkError',
-			code: 'RESPONSE_SERIALIZATION_FAILED',
-			status: 500
-		})
+		).rejects.toMatchObject(expectedError)
 	})
 
 	test('throws FrameworkError for circular response payload', async () => {
 		const invoker = new HandlerInvoker()
 		const circular: { self?: unknown } = {}
 		circular.self = circular
+		const expectedError: Partial<FrameworkError> = {
+			name: 'FrameworkError',
+			code: 'RESPONSE_SERIALIZATION_FAILED',
+			status: 500
+		}
 
 		await expect(
 			invoker.invoke({
@@ -98,10 +104,6 @@ describe('HandlerInvoker', () => {
 				args: [],
 				context: createContextStub()
 			})
-		).rejects.toMatchObject<Partial<FrameworkError>>({
-			name: 'FrameworkError',
-			code: 'RESPONSE_SERIALIZATION_FAILED',
-			status: 500
-		})
+		).rejects.toMatchObject(expectedError)
 	})
 })

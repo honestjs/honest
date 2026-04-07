@@ -22,7 +22,7 @@ describe('Application runtime metadata', () => {
 			}
 		}
 
-		MetadataRegistry.registerHandler('filter', 'RuntimeMetadataController:index', InjectedFilter)
+		MetadataRegistry.registerHandler('filter', RuntimeMetadataController, 'index', InjectedFilter)
 
 		const res = await testApp.request('/runtime-metadata')
 		expect(res.status).toBe(500)
